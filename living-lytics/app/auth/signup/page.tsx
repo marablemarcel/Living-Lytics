@@ -2,14 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { signUp } from '@/lib/auth/actions';
 
 const signupSchema = z.object({
   email: z.string().email('Email is invalid'),
@@ -26,7 +29,9 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -46,12 +51,35 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // TODO: Implement actual signup logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Signup attempt:', { email: data.email, password: data.password });
-    } catch (error) {
-      console.error('Signup error:', error);
-    } finally {
+      const result = await signUp(data.email, data.password);
+
+      if (result.error) {
+        // Map common Supabase errors to user-friendly messages
+        const errorMessage = result.error.toLowerCase();
+
+        if (errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
+          toast.error('This email is already registered. Please sign in or use a different email.');
+        } else if (errorMessage.includes('password') && (errorMessage.includes('weak') || errorMessage.includes('short'))) {
+          toast.error('Password is too weak. Please use a stronger password with at least 8 characters.');
+        } else if (errorMessage.includes('invalid email')) {
+          toast.error('Please enter a valid email address.');
+        } else if (errorMessage.includes('rate limit')) {
+          toast.error('Too many signup attempts. Please try again later.');
+        } else {
+          toast.error(result.error);
+        }
+        setIsLoading(false);
+      } else {
+        // Success - show toast and redirect
+        toast.success('Account created! Check your email.');
+
+        // Redirect after 2 seconds
+        setTimeout(() => {
+          router.push('/auth/login');
+        }, 2000);
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
   };

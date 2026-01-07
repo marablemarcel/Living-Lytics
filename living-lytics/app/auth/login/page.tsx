@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { signIn } from '@/lib/auth/actions';
 
 const loginSchema = z.object({
   email: z.string().email('Email is invalid'),
@@ -18,7 +21,9 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -31,12 +36,20 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // TODO: Implement actual login logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Login attempt:', data);
+      const result = await signIn(data.email, data.password);
+
+      if (result.error) {
+        toast.error(result.error);
+        setIsLoading(false);
+        return;
+      }
+
+      // Success - show toast and redirect to dashboard
+      toast.success('Welcome back!');
+      router.push('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-    } finally {
+      toast.error('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
   };
