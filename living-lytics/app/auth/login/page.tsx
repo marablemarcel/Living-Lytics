@@ -33,22 +33,37 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log('=== LOGIN FORM SUBMITTED ===');
+    console.log('Email:', data.email);
+    console.log('Password length:', data.password.length);
+
     setIsLoading(true);
 
     try {
+      console.log('About to call signIn function...');
       const result = await signIn(data.email, data.password);
+      console.log('signIn returned:', result);
 
       if (result.error) {
+        console.error('Login failed with error:', result.error);
         toast.error(result.error);
         setIsLoading(false);
         return;
       }
 
       // Success - show toast and redirect to dashboard
+      console.log('Login successful! Redirecting...');
       toast.success('Welcome back!');
-      router.push('/dashboard');
-    } catch (error) {
-      console.error('Login error:', error);
+
+      try {
+        router.push('/dashboard');
+        console.log('router.push called');
+      } catch (err) {
+        console.error('Router push failed:', err);
+        window.location.href = '/dashboard';
+      }
+    } catch (err) {
+      console.error('Unexpected error caught:', err);
       toast.error('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
