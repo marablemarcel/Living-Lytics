@@ -8,6 +8,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
         <div>
           <h1 className="text-4xl font-bold text-gray-900">Living Lytics</h1>
           <p className="mt-2 text-lg text-gray-600">
@@ -15,11 +16,13 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Component Tests */}
         <Card>
           <CardHeader>
             <CardTitle>Design System Test</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Buttons */}
             <div className="flex gap-2">
               <Button>Primary Button</Button>
               <Button variant="secondary">Secondary</Button>
@@ -27,6 +30,7 @@ export default function Home() {
               <Button variant="destructive">Danger</Button>
             </div>
 
+            {/* Badges */}
             <div className="flex gap-2">
               <Badge>Default</Badge>
               <Badge variant="secondary">Secondary</Badge>
@@ -36,6 +40,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
+        {/* Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <MetricCard
             title="Page Views"
