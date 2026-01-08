@@ -5,6 +5,14 @@ import { toast } from 'sonner'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { Button } from '@/components/ui/button'
 import { BarChart3 } from 'lucide-react'
+import LineChart from '@/components/charts/line-chart'
+import BarChart from '@/components/charts/bar-chart'
+import {
+  trafficOverTimeData,
+  engagementMetricsData,
+  conversionFunnelData,
+  channelTrafficData,
+} from '@/lib/data/mockChartData'
 
 export default function AnalyticsPage() {
   const [hasDataSources, setHasDataSources] = useState(false) // Default to false for testing
@@ -49,13 +57,13 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Page Header with Toggle Button */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
           <p className="text-muted-foreground">
-            Detailed analytics coming soon...
+            Detailed performance analysis
           </p>
         </div>
         {/* Testing Toggle Button */}
@@ -69,9 +77,49 @@ export default function AnalyticsPage() {
         </Button>
       </div>
 
-      {/* Analytics content will go here */}
-      <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-        Advanced analytics features coming soon...
+      {/* Charts Grid - Responsive: 1 col mobile, 2 cols desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Traffic Trends - Line Chart */}
+        <div className="lg:col-span-2">
+          <LineChart
+            data={trafficOverTimeData}
+            title="Traffic Trends"
+            dataKeys={['visitors', 'sessions']}
+            xAxisKey="date"
+            height={350}
+          />
+        </div>
+
+        {/* Engagement Metrics - Bar Chart */}
+        <BarChart
+          data={engagementMetricsData}
+          title="Engagement Metrics"
+          dataKeys={['value']}
+          xAxisKey="metric"
+          colors={['#8B5CF6']}
+          showLegend={false}
+        />
+
+        {/* Conversion Funnel - Bar Chart */}
+        <BarChart
+          data={conversionFunnelData}
+          title="Conversion Funnel"
+          dataKeys={['users']}
+          xAxisKey="stage"
+          colors={['#10B981']}
+          showLegend={false}
+        />
+
+        {/* Top Channels - Bar Chart */}
+        <div className="lg:col-span-2">
+          <BarChart
+            data={channelTrafficData}
+            title="Top Channels"
+            dataKeys={['visitors', 'sessions']}
+            xAxisKey="channel"
+            height={350}
+          />
+        </div>
       </div>
     </div>
   )

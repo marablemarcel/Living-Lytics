@@ -10,12 +10,20 @@ import { PeriodSelector, getPeriodLabel } from '@/components/dashboard/period-se
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { Button } from '@/components/ui/button'
 import { overviewMetrics } from '@/lib/data/mockMetrics'
+import LineChart from '@/components/charts/line-chart'
+import BarChart from '@/components/charts/bar-chart'
+import {
+  trafficOverTimeData,
+  revenueOverTimeData,
+  conversionByChannelData,
+} from '@/lib/data/mockChartData'
+import { useDataSources } from '@/app/hooks/useDataSources'
 
 export default function OverviewPage() {
   const router = useRouter()
   const [period, setPeriod] = useState('30d')
   const [isLoading, setIsLoading] = useState(true)
-  const [hasDataSources, setHasDataSources] = useState(false) // Default to false for testing
+  const { hasDataSources, toggleMockData } = useDataSources()
 
   // Simulate data fetching with 1 second delay
   useEffect(() => {
@@ -46,6 +54,24 @@ export default function OverviewPage() {
   if (!hasDataSources) {
     return (
       <div className="space-y-6">
+        {/* Dev-only Toggle */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-yellow-800">
+                Development Mode: {hasDataSources ? 'Showing mock data' : 'Showing empty state'}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleMockData}
+              >
+                Toggle Mock Data
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -54,15 +80,6 @@ export default function OverviewPage() {
               Get started by connecting your first data source
             </p>
           </div>
-          {/* Testing Toggle Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setHasDataSources(true)}
-            className="text-xs"
-          >
-            Toggle Data Sources (Test)
-          </Button>
         </div>
 
         {/* Empty State */}
@@ -73,7 +90,25 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page Header with Toggle Button */}
+      {/* Dev-only Toggle */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-yellow-800">
+              Development Mode: {hasDataSources ? 'Showing mock data' : 'Showing empty state'}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleMockData}
+            >
+              Toggle Mock Data
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
@@ -83,15 +118,6 @@ export default function OverviewPage() {
         </div>
         <div className="flex items-center gap-2">
           <PeriodSelector value={period} onChange={setPeriod} />
-          {/* Testing Toggle Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setHasDataSources(false)}
-            className="text-xs"
-          >
-            Toggle Data Sources (Test)
-          </Button>
         </div>
       </div>
 
@@ -139,6 +165,46 @@ export default function OverviewPage() {
         </div>
         <MetricTabs defaultCategory="all" />
       </div>
+
+      {/* Performance Trends Section */}
+      <section className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold">Performance Trends</h2>
+          <p className="text-sm text-muted-foreground">
+            Track your key metrics over time
+          </p>
+        </div>
+
+        {/* Two-column chart grid */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Traffic Over Time Chart */}
+          <LineChart
+            data={trafficOverTimeData}
+            title="Traffic Over Time"
+            dataKeys={['visitors', 'sessions']}
+            xAxisKey="date"
+            height={350}
+          />
+
+          {/* Revenue Over Time Chart */}
+          <LineChart
+            data={revenueOverTimeData}
+            title="Revenue Over Time"
+            dataKeys={['revenue', 'expenses']}
+            xAxisKey="month"
+            height={350}
+          />
+        </div>
+
+        {/* Full-width Conversion by Channel Bar Chart */}
+        <BarChart
+          data={conversionByChannelData}
+          title="Conversions by Channel"
+          dataKeys={['conversions']}
+          xAxisKey="channel"
+          height={350}
+        />
+      </section>
     </div>
   )
 }
