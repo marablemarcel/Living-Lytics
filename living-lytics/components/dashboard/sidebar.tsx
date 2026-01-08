@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BarChart3, Lightbulb, Settings } from 'lucide-react'
+import { Home, BarChart3, Lightbulb, Database, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -20,6 +20,11 @@ const navItems = [
     name: 'Insights',
     href: '/dashboard/insights',
     icon: Lightbulb,
+  },
+  {
+    name: 'Data Sources',
+    href: '/dashboard/sources',
+    icon: Database,
   },
   {
     name: 'Settings',
@@ -55,13 +60,13 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  'relative flex items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-primary/10 text-primary before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:rounded-r-full before:bg-primary'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className={cn('h-5 w-5', isActive && 'text-primary')} />
                 <span>{item.name}</span>
               </Link>
             )

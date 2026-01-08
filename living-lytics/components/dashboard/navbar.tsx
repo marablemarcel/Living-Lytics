@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { Breadcrumbs, BreadcrumbItem } from '@/components/layout/breadcrumbs'
 
 const getPageTitle = (pathname: string): string => {
   const segments = pathname.split('/').filter(Boolean)
@@ -25,9 +26,24 @@ const getPageTitle = (pathname: string): string => {
     analytics: 'Analytics',
     insights: 'Insights',
     settings: 'Settings',
+    sources: 'Data Sources',
+    'data-sources': 'Data Sources',
   }
 
   return titleMap[page] || page.charAt(0).toUpperCase() + page.slice(1)
+}
+
+const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
+  const segments = pathname.split('/').filter(Boolean)
+  const page = segments[segments.length - 1] || 'overview'
+
+  return [
+    {
+      label: getPageTitle(pathname),
+      href: pathname,
+      isCurrentPage: true,
+    },
+  ]
 }
 
 export function Navbar() {
@@ -65,11 +81,12 @@ export function Navbar() {
   }
 
   const pageTitle = getPageTitle(pathname)
+  const breadcrumbs = getBreadcrumbs(pathname)
 
   return (
     <header className="fixed left-0 top-0 z-30 w-full border-b bg-background lg:left-64 lg:w-[calc(100%-16rem)]">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Left side - Page title and mobile menu */}
+        {/* Left side - Breadcrumbs and mobile menu */}
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -79,9 +96,12 @@ export function Navbar() {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-            {pageTitle}
-          </h1>
+          <div className="flex flex-col gap-1">
+            <Breadcrumbs items={breadcrumbs} />
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              {pageTitle}
+            </h1>
+          </div>
         </div>
 
         {/* Right side - Business name and user menu */}
