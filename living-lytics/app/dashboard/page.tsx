@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/hooks/useAuth';
 import { signOut } from '@/lib/auth/actions';
+import { getProfile } from '@/lib/api/profile';
+import type { Profile } from '@/types/profile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -11,6 +13,36 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    async function checkProfileCompletion() {
+      if (!user) {
+        setCheckingProfile(false);
+        return;
+      }
+
+      console.log('Checking profile for user:', user.id);
+      const { data: profileData, error } = await getProfile(user.id);
+      console.log('Profile result:', profileData);
+
+      if (error || !profileData) {
+        // No profile exists, redirect to onboarding
+        router.push('/onboarding');
+      } else {
+        // Profile exists, save it and show dashboard
+        setProfile(profileData);
+        setCheckingProfile(false);
+      }
+    }
+
+    if (!loading && user) {
+      checkProfileCompletion();
+    } else if (!loading && !user) {
+      setCheckingProfile(false);
+    }
+  }, [user, loading, router]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -23,7 +55,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
+  if (loading || checkingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -41,16 +73,19 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-2xl">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold">Dashboard</CardTitle>
-          <CardDescription className="text-lg">
-            Welcome to Living Lytics
+        <CardHeader className="space-y-3 text-center">
+          <CardTitle className="text-4xl font-bold">
+            Welcome back, {profile?.business_name || 'User'}!
+          </CardTitle>
+          <CardDescription className="text-xl font-medium">
+            {profile?.business_type ? `${profile.business_type} Business` : 'Living Lytics Dashboard'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Logged in as:</p>
-            <p className="text-lg font-medium">{user?.email}</p>
+          <div className="space-y-2 text-center">
+            <p className="text-sm text-muted-foreground">
+              Logged in as: {user?.email}
+            </p>
           </div>
 
           <div className="pt-4">

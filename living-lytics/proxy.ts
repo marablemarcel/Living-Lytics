@@ -4,8 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 // Define public routes that don't require authentication
 const publicRoutes = ['/', '/pricing', '/about', '/contact', '/features'];
 
-export async function middleware(request: NextRequest) {
-  console.log('Middleware running for:', request.url);
+export async function proxy(request: NextRequest) {
+  console.log('Proxy running for:', request.url);
 
   const pathname = request.nextUrl.pathname;
 
@@ -13,6 +13,7 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.includes(pathname);
   const isAuthRoute = pathname.startsWith('/auth');
   const isDashboardRoute = pathname.startsWith('/dashboard');
+  const isOnboardingRoute = pathname.startsWith('/onboarding');
 
   // Allow public routes without authentication
   if (isPublicRoute) {
@@ -67,8 +68,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If no session and trying to access dashboard routes, redirect to login
-  if (!session && isDashboardRoute) {
+  // If no session and trying to access protected routes (dashboard or onboarding), redirect to login
+  if (!session && (isDashboardRoute || isOnboardingRoute)) {
     const redirectUrl = new URL('/auth/login', request.url);
     console.log('Redirecting to:', redirectUrl.toString());
     return NextResponse.redirect(redirectUrl);
@@ -79,6 +80,12 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = new URL('/dashboard', request.url);
     console.log('Redirecting to:', redirectUrl.toString());
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // If authenticated user is on onboarding route, allow access
+  if (session && isOnboardingRoute) {
+    console.log('Allowing authenticated user access to onboarding');
+    return response;
   }
 
   console.log('Allowing request to continue');
