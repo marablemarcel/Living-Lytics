@@ -40,7 +40,7 @@ const randomBetween = (min: number, max: number): number => {
 };
 
 /**
- * Generate mock chart data for a given date range
+ * Generate mock chart data for a given date range with realistic patterns
  * @param startDate - Start of the date range
  * @param endDate - End of the date range
  * @returns Array of data points covering the date range
@@ -55,11 +55,33 @@ export function generateMockChartData(startDate: Date, endDate: Date): ChartData
   for (let i = 0; i <= days; i++) {
     const currentDate = addDays(startOfDay(startDate), i);
 
+    // Get day of week (0 = Sunday, 6 = Saturday)
+    const dayOfWeek = currentDate.getDay();
+
+    // Weekday multiplier (higher traffic on weekdays, lower on weekends)
+    const weekdayMultiplier = (dayOfWeek === 0 || dayOfWeek === 6) ? 0.7 : 1.0;
+
+    // Growth trend (slight increase over time - 20% growth over the period)
+    const growthMultiplier = 1 + (i / days) * 0.2;
+
+    // Base values
+    const basePageViews = 1500;
+    const baseSessions = 900;
+    const baseUsers = 500;
+
+    // Add randomness (±20%)
+    const randomness = 0.8 + Math.random() * 0.4;
+
+    // Calculate final values with patterns
+    const pageViews = Math.floor(basePageViews * weekdayMultiplier * growthMultiplier * randomness);
+    const sessions = Math.floor(baseSessions * weekdayMultiplier * growthMultiplier * randomness);
+    const users = Math.floor(baseUsers * weekdayMultiplier * growthMultiplier * randomness);
+
     data.push({
       date: format(currentDate, 'yyyy-MM-dd'),
-      pageViews: randomBetween(1000, 5000),
-      sessions: randomBetween(500, 3000),
-      users: randomBetween(300, 2000),
+      pageViews,
+      sessions,
+      users,
     });
   }
 

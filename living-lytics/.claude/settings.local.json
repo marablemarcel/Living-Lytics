@@ -9,7 +9,11 @@
       "Bash(curl:*)",
       "Bash(npx next lint:*)",
       "Bash(npm run build:*)",
-      "Bash(npx shadcn@latest add popover)"
+      "Bash(npx shadcn@latest add popover)",
+      "Bash(timeout /t 10)",
+      "Bash(ls:*)",
+      "Bash(taskkill:*)",
+      "Bash(pkill:*)"
     ]
   }
 }
