@@ -31,10 +31,11 @@ export interface InsightData {
 }
 
 export interface TrafficSourceData {
-  source: string;
+  name: string; // Changed from 'source' to 'name' for chart compatibility
   visitors: number;
   sessions: number;
   bounceRate: number;
+  [key: string]: string | number; // Index signature for chart compatibility
 }
 
 export interface DeviceData {
@@ -44,10 +45,11 @@ export interface DeviceData {
 }
 
 export interface TopPageData {
-  page: string;
+  name: string; // Changed from 'page' to 'name' for chart compatibility
   pageViews: number;
   avgDuration: number;
   bounceRate: number;
+  [key: string]: string | number; // Index signature for chart compatibility
 }
 
 /**
@@ -217,12 +219,12 @@ export function generateMockInsights(): InsightData[] {
  */
 export function generateTrafficSources(): TrafficSourceData[] {
   return [
-    { source: 'Organic Search', visitors: 12847, sessions: 18392, bounceRate: 38.5 },
-    { source: 'Direct', visitors: 8234, sessions: 11892, bounceRate: 42.1 },
-    { source: 'Social Media', visitors: 6891, sessions: 9234, bounceRate: 51.3 },
-    { source: 'Paid Search', visitors: 4532, sessions: 6789, bounceRate: 45.8 },
-    { source: 'Email', visitors: 3245, sessions: 5123, bounceRate: 32.4 },
-    { source: 'Referral', visitors: 2134, sessions: 3456, bounceRate: 47.2 },
+    { name: 'Organic Search', visitors: 12847, sessions: 18392, bounceRate: 38.5 },
+    { name: 'Direct', visitors: 8234, sessions: 11892, bounceRate: 42.1 },
+    { name: 'Social Media', visitors: 6891, sessions: 9234, bounceRate: 51.3 },
+    { name: 'Paid Search', visitors: 4532, sessions: 6789, bounceRate: 45.8 },
+    { name: 'Email', visitors: 3245, sessions: 5123, bounceRate: 32.4 },
+    { name: 'Referral', visitors: 2134, sessions: 3456, bounceRate: 47.2 },
   ];
 }
 
@@ -242,11 +244,11 @@ export function generateDeviceData(): DeviceData[] {
  */
 export function generateTopPages(): TopPageData[] {
   return [
-    { page: '/home', pageViews: 45293, avgDuration: 142, bounceRate: 35.2 },
-    { page: '/products', pageViews: 32847, avgDuration: 215, bounceRate: 28.7 },
-    { page: '/pricing', pageViews: 18234, avgDuration: 185, bounceRate: 31.5 },
-    { page: '/about', pageViews: 12456, avgDuration: 95, bounceRate: 52.3 },
-    { page: '/blog', pageViews: 9834, avgDuration: 245, bounceRate: 42.8 },
-    { page: '/contact', pageViews: 6723, avgDuration: 68, bounceRate: 38.9 },
+    { name: '/home', pageViews: 45293, avgDuration: 142, bounceRate: 35.2 },
+    { name: '/products', pageViews: 32847, avgDuration: 215, bounceRate: 28.7 },
+    { name: '/pricing', pageViews: 18234, avgDuration: 185, bounceRate: 31.5 },
+    { name: '/about', pageViews: 12456, avgDuration: 95, bounceRate: 52.3 },
+    { name: '/blog', pageViews: 9834, avgDuration: 245, bounceRate: 42.8 },
+    { name: '/contact', pageViews: 6723, avgDuration: 68, bounceRate: 38.9 },
   ];
 }
