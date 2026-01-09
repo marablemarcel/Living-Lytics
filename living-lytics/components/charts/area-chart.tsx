@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import {
-  BarChart as RechartsBarChart,
-  Bar,
+  AreaChart as RechartsAreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,22 +11,26 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
+import { format, parseISO } from 'date-fns'
 import { ChartWrapper } from './chart-wrapper'
 
-// TypeScript Interface for Bar Configuration
-export interface BarConfig {
+// TypeScript Interface for Area Configuration
+export interface AreaConfig {
   key: string
   name: string
   color: string
 }
 
+// TypeScript Interface for Chart Data
+export interface AreaChartData {
+  date: string
+  [key: string]: string | number
+}
+
 // Main Component Props
-export interface BarChartProps {
-  data: Array<{
-    name: string
-    [key: string]: string | number
-  }>
-  bars: BarConfig[]
+export interface AreaChartProps {
+  data: AreaChartData[]
+  areas: AreaConfig[]
   height?: number
   showLegend?: boolean
   loading?: boolean
@@ -64,9 +68,9 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 
   return (
     <div className="rounded-lg border bg-white p-3 shadow-lg">
-      {/* Category Header */}
+      {/* Date Header */}
       <p className="mb-2 text-sm font-semibold text-gray-900">
-        {label}
+        {label ? format(parseISO(label), 'MMM dd, yyyy') : ''}
       </p>
 
       {/* Metric Values */}
@@ -96,33 +100,33 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 }
 
 /**
- * Production-Ready Bar Chart Component
- * Displays categorical data with vertical bars for comparison
+ * Production-Ready Area Chart Component
+ * Displays time-series data with filled areas to show volume/trends
  *
  * @example
  * ```tsx
- * <BarChart
+ * <AreaChart
  *   data={[
- *     { name: 'Monday', visits: 4000, conversions: 240 },
- *     { name: 'Tuesday', visits: 3000, conversions: 139 },
+ *     { date: '2024-01-01', pageViews: 1200, sessions: 800 },
+ *     { date: '2024-01-02', pageViews: 1400, sessions: 950 },
  *   ]}
- *   bars={[
- *     { key: 'visits', name: 'Visits', color: '#0ea5e9' },
- *     { key: 'conversions', name: 'Conversions', color: '#10b981' },
+ *   areas={[
+ *     { key: 'pageViews', name: 'Page Views', color: '#0ea5e9' },
+ *     { key: 'sessions', name: 'Sessions', color: '#10b981' },
  *   ]}
  *   height={350}
  * />
  * ```
  */
-export default function BarChart({
+export default function AreaChart({
   data,
-  bars,
+  areas,
   height = 300,
   showLegend = true,
   loading = false,
-}: BarChartProps) {
-  // State to track which bars are hidden
-  const [hiddenBars, setHiddenBars] = useState<string[]>([])
+}: AreaChartProps) {
+  // State to track which areas are hidden
+  const [hiddenAreas, setHiddenAreas] = useState<string[]>([])
 
   // Handle loading state
   if (loading) {
@@ -133,8 +137,8 @@ export default function BarChart({
     )
   }
 
-  // Handle empty state or missing bars
-  if (!data || data.length === 0 || !bars || bars.length === 0) {
+  // Handle empty state or missing areas
+  if (!data || data.length === 0 || !areas || areas.length === 0) {
     return (
       <ChartWrapper isEmpty={true} height={height} emptyMessage="No data available">
         <></>
@@ -142,9 +146,9 @@ export default function BarChart({
     )
   }
 
-  // Handle legend click to toggle bar visibility
+  // Handle legend click to toggle area visibility
   const handleLegendClick = (dataKey: string) => {
-    setHiddenBars((prev) => {
+    setHiddenAreas((prev) => {
       if (prev.includes(dataKey)) {
         // If already hidden, show it
         return prev.filter((key) => key !== dataKey)
@@ -162,7 +166,7 @@ export default function BarChart({
     return (
       <div className="flex flex-wrap items-center justify-center gap-4 pt-5">
         {payload.map((entry: any, index: number) => {
-          const isHidden = hiddenBars.includes(entry.dataKey)
+          const isHidden = hiddenAreas.includes(entry.dataKey)
 
           return (
             <div
@@ -177,7 +181,7 @@ export default function BarChart({
                 style={{ backgroundColor: entry.color }}
               />
 
-              {/* Bar name */}
+              {/* Area name */}
               <span className="text-sm text-gray-700">
                 {entry.value}
               </span>
@@ -190,7 +194,7 @@ export default function BarChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <RechartsBarChart
+      <RechartsAreaChart
         data={data}
         margin={{
           top: 5,
@@ -199,6 +203,23 @@ export default function BarChart({
           bottom: 5,
         }}
       >
+        {/* Gradient Definitions */}
+        <defs>
+          {areas.map((area) => (
+            <linearGradient
+              key={`gradient-${area.key}`}
+              id={`gradient-${area.key}`}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              <stop offset="5%" stopColor={area.color} stopOpacity={0.8} />
+              <stop offset="95%" stopColor={area.color} stopOpacity={0} />
+            </linearGradient>
+          ))}
+        </defs>
+
         {/* Grid Lines */}
         <CartesianGrid
           strokeDasharray="3 3"
@@ -206,13 +227,20 @@ export default function BarChart({
           opacity={0.3}
         />
 
-        {/* X-Axis */}
+        {/* X-Axis with Date Formatting */}
         <XAxis
-          dataKey="name"
+          dataKey="date"
           stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          tickFormatter={(value) => {
+            try {
+              return format(parseISO(value), 'MMM dd')
+            } catch {
+              return value
+            }
+          }}
         />
 
         {/* Y-Axis with Number Formatting */}
@@ -230,19 +258,21 @@ export default function BarChart({
         {/* Interactive Custom Legend */}
         {showLegend && <Legend content={renderCustomLegend} />}
 
-        {/* Render Bars */}
-        {bars.map((bar) => (
-          <Bar
-            key={bar.key}
-            dataKey={bar.key}
-            name={bar.name}
-            fill={bar.color}
-            radius={[4, 4, 0, 0]}
-            hide={hiddenBars.includes(bar.key)}
+        {/* Render Areas */}
+        {areas.map((area) => (
+          <Area
+            key={area.key}
+            type="monotone"
+            dataKey={area.key}
+            name={area.name}
+            stroke={area.color}
+            strokeWidth={2}
+            fill={`url(#gradient-${area.key})`}
+            hide={hiddenAreas.includes(area.key)}
             animationDuration={300}
           />
         ))}
-      </RechartsBarChart>
+      </RechartsAreaChart>
     </ResponsiveContainer>
   )
 }

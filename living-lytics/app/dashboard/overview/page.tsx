@@ -12,12 +12,15 @@ import { Button } from '@/components/ui/button'
 import { overviewMetrics } from '@/lib/data/mockMetrics'
 import LineChart from '@/components/charts/line-chart'
 import BarChart from '@/components/charts/bar-chart'
+import AreaChart from '@/components/charts/area-chart'
+import PieChart from '@/components/charts/pie-chart'
 import {
   trafficOverTimeData,
   revenueOverTimeData,
   conversionByChannelData,
 } from '@/lib/data/mockChartData'
 import { useDataSources } from '@/app/hooks/useDataSources'
+import { CHART_COLORS } from '@/lib/constants/chart-colors'
 
 export default function OverviewPage() {
   const router = useRouter()
@@ -195,44 +198,93 @@ export default function OverviewPage() {
         <MetricTabs defaultCategory="all" />
       </div>
 
-      {/* Performance Trends Section */}
+      {/* Chart Showcase Section */}
       <section className="space-y-6">
         <div>
-          <h2 className="text-2xl font-semibold">Performance Trends</h2>
+          <h2 className="text-2xl font-semibold">Chart Showcase</h2>
           <p className="text-sm text-muted-foreground">
-            Track your key metrics over time
+            Explore different visualization types with sample data
           </p>
         </div>
 
-        {/* Two-column chart grid */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Traffic Over Time Chart */}
-          <LineChart
-            data={trafficOverTimeData}
-            title="Traffic Over Time"
-            dataKeys={['visitors', 'sessions']}
-            xAxisKey="date"
-            height={350}
-          />
-
-          {/* Revenue Over Time Chart */}
-          <LineChart
-            data={revenueOverTimeData}
-            title="Revenue Over Time"
-            dataKeys={['revenue', 'expenses']}
-            xAxisKey="month"
-            height={350}
-          />
+        {/* Bar Chart Example */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Bar Chart - Weekly Performance</h3>
+            <p className="text-sm text-muted-foreground">
+              Compare visits and conversions across the week
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-6">
+            <BarChart
+              data={[
+                { name: 'Monday', visits: 4000, conversions: 240 },
+                { name: 'Tuesday', visits: 3000, conversions: 139 },
+                { name: 'Wednesday', visits: 2000, conversions: 980 },
+                { name: 'Thursday', visits: 2780, conversions: 390 },
+                { name: 'Friday', visits: 1890, conversions: 480 },
+                { name: 'Saturday', visits: 2390, conversions: 380 },
+                { name: 'Sunday', visits: 3490, conversions: 430 },
+              ]}
+              bars={[
+                { key: 'visits', name: 'Visits', color: CHART_COLORS.primary },
+                { key: 'conversions', name: 'Conversions', color: CHART_COLORS.secondary },
+              ]}
+              height={350}
+            />
+          </div>
         </div>
 
-        {/* Full-width Conversion by Channel Bar Chart */}
-        <BarChart
-          data={conversionByChannelData}
-          title="Conversions by Channel"
-          dataKeys={['conversions']}
-          xAxisKey="channel"
-          height={350}
-        />
+        {/* Area Chart Example */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Area Chart - Traffic Volume</h3>
+            <p className="text-sm text-muted-foreground">
+              Visualize traffic volume and engagement over time
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-6">
+            <AreaChart
+              data={[
+                { date: '2024-01-01', traffic: 3400, engagement: 2400 },
+                { date: '2024-01-02', traffic: 4200, engagement: 2210 },
+                { date: '2024-01-03', traffic: 3800, engagement: 2290 },
+                { date: '2024-01-04', traffic: 4800, engagement: 2000 },
+                { date: '2024-01-05', traffic: 3900, engagement: 2181 },
+                { date: '2024-01-06', traffic: 4300, engagement: 2500 },
+                { date: '2024-01-07', traffic: 5100, engagement: 2700 },
+              ]}
+              areas={[
+                { key: 'traffic', name: 'Traffic', color: CHART_COLORS.primary },
+                { key: 'engagement', name: 'Engagement', color: CHART_COLORS.tertiary },
+              ]}
+              height={350}
+            />
+          </div>
+        </div>
+
+        {/* Pie Chart Example */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold">Pie Chart - Traffic Sources</h3>
+            <p className="text-sm text-muted-foreground">
+              Distribution of traffic by source channel
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-6">
+            <PieChart
+              data={[
+                { name: 'Direct', value: 4000, color: CHART_COLORS.primary },
+                { name: 'Social Media', value: 3000, color: CHART_COLORS.secondary },
+                { name: 'Search Engines', value: 2000, color: CHART_COLORS.tertiary },
+                { name: 'Referral', value: 1000, color: CHART_COLORS.quaternary },
+                { name: 'Email', value: 800, color: '#ef4444' },
+                { name: 'Other', value: 500, color: CHART_COLORS.neutral },
+              ]}
+              height={400}
+            />
+          </div>
+        </div>
       </section>
     </div>
   )
