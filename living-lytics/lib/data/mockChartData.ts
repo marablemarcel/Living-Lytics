@@ -1,3 +1,5 @@
+import { format, differenceInDays, addDays, startOfDay } from 'date-fns';
+
 // TypeScript types for chart data
 export interface TrafficDataPoint {
   date: string;
@@ -17,6 +19,14 @@ export interface RevenueOverTimeDataPoint {
   expenses: number;
 }
 
+// Chart data point with multiple metrics
+export interface ChartDataPoint {
+  date: string;
+  pageViews: number;
+  sessions: number;
+  users: number;
+}
+
 // Helper function to get date N days ago
 const getDaysAgo = (days: number): string => {
   const date = new Date();
@@ -28,6 +38,33 @@ const getDaysAgo = (days: number): string => {
 const randomBetween = (min: number, max: number): number => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
+
+/**
+ * Generate mock chart data for a given date range
+ * @param startDate - Start of the date range
+ * @param endDate - End of the date range
+ * @returns Array of data points covering the date range
+ */
+export function generateMockChartData(startDate: Date, endDate: Date): ChartDataPoint[] {
+  // Calculate number of days between start and end
+  const days = differenceInDays(endDate, startDate);
+
+  // Generate data for each day in range
+  const data: ChartDataPoint[] = [];
+
+  for (let i = 0; i <= days; i++) {
+    const currentDate = addDays(startOfDay(startDate), i);
+
+    data.push({
+      date: format(currentDate, 'yyyy-MM-dd'),
+      pageViews: randomBetween(1000, 5000),
+      sessions: randomBetween(500, 3000),
+      users: randomBetween(300, 2000),
+    });
+  }
+
+  return data;
+}
 
 // Traffic Over Time Data (last 30 days)
 export const trafficOverTimeData: TrafficDataPoint[] = Array.from({ length: 30 }, (_, i) => ({

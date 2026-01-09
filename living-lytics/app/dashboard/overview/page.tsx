@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Users, TrendingUp, DollarSign, Clock } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,15 +18,43 @@ import {
   trafficOverTimeData,
   revenueOverTimeData,
   conversionByChannelData,
+  generateMockChartData,
+  ChartDataPoint,
 } from '@/lib/data/mockChartData'
 import { useDataSources } from '@/app/hooks/useDataSources'
 import { CHART_COLORS } from '@/lib/constants/chart-colors'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { DateRange, getLast30Days } from '@/lib/utils/dates'
+
+// Helper function to generate comparison text based on date range
+function getComparisonText(dateRange: DateRange): string {
+  const days = Math.ceil(
+    (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
+  )
+
+  if (days <= 7) return 'vs previous 7 days'
+  if (days <= 30) return 'vs previous 30 days'
+  if (days <= 90) return 'vs previous 90 days'
+  if (days <= 365) return 'vs previous 12 months'
+  return 'vs previous period'
+}
+
+// Interface for calculated metrics
+interface CalculatedMetrics {
+  visitors: { current: number; previous: number; change: number; trend: 'up' | 'down' | 'neutral' }
+  sessions: { current: number; previous: number; change: number; trend: 'up' | 'down' | 'neutral' }
+  users: { current: number; previous: number; change: number; trend: 'up' | 'down' | 'neutral' }
+  avgDuration: { current: number; previous: number; change: number; trend: 'up' | 'down' | 'neutral' }
+}
 
 export default function OverviewPage() {
   const router = useRouter()
   const [period, setPeriod] = useState('30d')
   const [isLoading, setIsLoading] = useState(true)
   const { hasDataSources, toggleMockData } = useDataSources()
+  const [dateRange, setDateRange] = useState<DateRange>(getLast30Days())
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([])
+  const [calculatedMetrics, setCalculatedMetrics] = useState<CalculatedMetrics | null>(null)
 
   // Simulate data fetching with 1 second delay
   useEffect(() => {
@@ -37,6 +65,89 @@ export default function OverviewPage() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Generate chart data when date range changes and calculate metrics
+  useEffect(() => {
+    const newData = generateMockChartData(dateRange.start, dateRange.end)
+    setChartData(newData)
+
+    // Calculate previous period dates
+    const daysDiff = Math.ceil(
+      (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    const previousStart = new Date(dateRange.start)
+    previousStart.setDate(previousStart.getDate() - daysDiff - 1)
+
+    const previousEnd = new Date(dateRange.start)
+    previousEnd.setDate(previousEnd.getDate() - 1)
+
+    // Generate mock data for previous period
+    const previousData = generateMockChartData(previousStart, previousEnd)
+
+    // Calculate totals for current period
+    const currentVisitors = newData.reduce((sum, day) => sum + day.pageViews, 0)
+    const currentSessions = newData.reduce((sum, day) => sum + day.sessions, 0)
+    const currentUsers = newData.reduce((sum, day) => sum + day.users, 0)
+    const currentAvgDuration = newData.length > 0
+      ? newData.reduce((sum, day) => sum + day.sessions, 0) / newData.length / 10
+      : 0
+
+    // Calculate totals for previous period
+    const previousVisitors = previousData.reduce((sum, day) => sum + day.pageViews, 0)
+    const previousSessions = previousData.reduce((sum, day) => sum + day.sessions, 0)
+    const previousUsers = previousData.reduce((sum, day) => sum + day.users, 0)
+    const previousAvgDuration = previousData.length > 0
+      ? previousData.reduce((sum, day) => sum + day.sessions, 0) / previousData.length / 10
+      : 0
+
+    // Calculate percentage changes
+    const visitorsChange = previousVisitors > 0
+      ? ((currentVisitors - previousVisitors) / previousVisitors) * 100
+      : 0
+    const sessionsChange = previousSessions > 0
+      ? ((currentSessions - previousSessions) / previousSessions) * 100
+      : 0
+    const usersChange = previousUsers > 0
+      ? ((currentUsers - previousUsers) / previousUsers) * 100
+      : 0
+    const avgDurationChange = previousAvgDuration > 0
+      ? ((currentAvgDuration - previousAvgDuration) / previousAvgDuration) * 100
+      : 0
+
+    // Determine trends
+    const getTrend = (change: number): 'up' | 'down' | 'neutral' => {
+      if (Math.abs(change) < 0.1) return 'neutral'
+      return change > 0 ? 'up' : 'down'
+    }
+
+    setCalculatedMetrics({
+      visitors: {
+        current: currentVisitors,
+        previous: previousVisitors,
+        change: visitorsChange,
+        trend: getTrend(visitorsChange),
+      },
+      sessions: {
+        current: currentSessions,
+        previous: previousSessions,
+        change: sessionsChange,
+        trend: getTrend(sessionsChange),
+      },
+      users: {
+        current: currentUsers,
+        previous: previousUsers,
+        change: usersChange,
+        trend: getTrend(usersChange),
+      },
+      avgDuration: {
+        current: currentAvgDuration,
+        previous: previousAvgDuration,
+        change: avgDurationChange,
+        trend: getTrend(avgDurationChange),
+      },
+    })
+  }, [dateRange])
+
   // Handle connect data source action
   const handleConnectDataSource = () => {
     // For now, show a toast message
@@ -44,6 +155,19 @@ export default function OverviewPage() {
     // Alternatively, navigate to settings:
     // router.push('/dashboard/settings')
   }
+
+  // Handle date range change
+  const handleDateRangeChange = useCallback((range: DateRange) => {
+    setDateRange(range)
+
+    // Defer console logging to not block the click handler
+    setTimeout(() => {
+      console.log('Date range changed:', {
+        start: range.start.toISOString(),
+        end: range.end.toISOString(),
+      })
+    }, 0)
+  }, [])
 
   // Map icon names to components for the key metrics
   const iconMap: Record<string, React.ReactNode> = {
@@ -128,7 +252,7 @@ export default function OverviewPage() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Key Metrics</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {isLoading ? (
+          {isLoading || !calculatedMetrics ? (
             // Show 4 loading skeleton cards
             Array.from({ length: 4 }).map((_, index) => (
               <MetricCardEnhanced
@@ -141,42 +265,63 @@ export default function OverviewPage() {
               />
             ))
           ) : (
-            // Show real metric cards with enhanced styling
-            overviewMetrics.map((metric) => (
+            // Show real metric cards with calculated data
+            <>
               <MetricCardEnhanced
-                key={metric.id}
-                title={metric.name}
-                value={metric.value}
-                change={metric.change}
-                trend={metric.trend}
-                period={metric.period}
-                icon={metric.icon ? iconMap[metric.icon] : undefined}
+                title="Total Visitors"
+                value={calculatedMetrics.visitors.current.toLocaleString()}
+                change={calculatedMetrics.visitors.change}
+                trend={calculatedMetrics.visitors.trend}
+                period={getComparisonText(dateRange)}
+                icon={<Users className="h-5 w-5 text-muted-foreground" />}
                 loading={false}
               />
-            ))
+              <MetricCardEnhanced
+                title="Total Sessions"
+                value={calculatedMetrics.sessions.current.toLocaleString()}
+                change={calculatedMetrics.sessions.change}
+                trend={calculatedMetrics.sessions.trend}
+                period={getComparisonText(dateRange)}
+                icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />}
+                loading={false}
+              />
+              <MetricCardEnhanced
+                title="Total Users"
+                value={calculatedMetrics.users.current.toLocaleString()}
+                change={calculatedMetrics.users.change}
+                trend={calculatedMetrics.users.trend}
+                period={getComparisonText(dateRange)}
+                icon={<Users className="h-5 w-5 text-muted-foreground" />}
+                loading={false}
+              />
+              <MetricCardEnhanced
+                title="Avg. Session Duration"
+                value={`${Math.floor(calculatedMetrics.avgDuration.current)}m ${Math.floor((calculatedMetrics.avgDuration.current % 1) * 60)}s`}
+                change={calculatedMetrics.avgDuration.change}
+                trend={calculatedMetrics.avgDuration.trend}
+                period={getComparisonText(dateRange)}
+                icon={<Clock className="h-5 w-5 text-muted-foreground" />}
+                loading={false}
+              />
+            </>
           )}
         </div>
       </div>
 
       {/* Performance Over Time - New LineChart Test */}
       <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold">Performance Over Time</h2>
-          <p className="text-sm text-muted-foreground">
-            Track your page views, sessions, and users over the last 7 days
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Performance Over Time</h2>
+            <p className="text-sm text-muted-foreground">
+              Track your page views, sessions, and users over time
+            </p>
+          </div>
+          <DateRangePicker value={dateRange} onChange={handleDateRangeChange} />
         </div>
         <div className="rounded-lg border bg-card p-6">
           <LineChart
-            data={[
-              { date: '2024-01-01', pageViews: 1200, sessions: 800, users: 450 },
-              { date: '2024-01-02', pageViews: 1400, sessions: 950, users: 520 },
-              { date: '2024-01-03', pageViews: 1100, sessions: 750, users: 410 },
-              { date: '2024-01-04', pageViews: 1600, sessions: 1100, users: 610 },
-              { date: '2024-01-05', pageViews: 1800, sessions: 1200, users: 680 },
-              { date: '2024-01-06', pageViews: 1500, sessions: 1000, users: 550 },
-              { date: '2024-01-07', pageViews: 2100, sessions: 1400, users: 780 },
-            ]}
+            data={chartData}
             lines={[
               { key: 'pageViews', name: 'Page Views', color: '#0ea5e9' },
               { key: 'sessions', name: 'Sessions', color: '#10b981' },
