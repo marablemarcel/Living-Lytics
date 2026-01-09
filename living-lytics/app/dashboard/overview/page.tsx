@@ -1,23 +1,18 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { Users, TrendingUp, DollarSign, Clock } from 'lucide-react'
+import { Users, TrendingUp, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { MetricCardEnhanced } from '@/components/dashboard/metric-card-enhanced'
 import { MetricTabs } from '@/components/dashboard/metric-tabs'
 import { PeriodSelector, getPeriodLabel } from '@/components/dashboard/period-selector'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { Button } from '@/components/ui/button'
-import { overviewMetrics } from '@/lib/data/mockMetrics'
 import LineChart from '@/components/charts/line-chart'
 import BarChart from '@/components/charts/bar-chart'
 import AreaChart from '@/components/charts/area-chart'
 import PieChart from '@/components/charts/pie-chart'
 import {
-  trafficOverTimeData,
-  revenueOverTimeData,
-  conversionByChannelData,
   generateMockChartData,
   ChartDataPoint,
 } from '@/lib/data/mockChartData'
@@ -26,17 +21,20 @@ import { CHART_COLORS } from '@/lib/constants/chart-colors'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { DateRange, getLast30Days } from '@/lib/utils/dates'
 
-// Helper function to generate comparison text based on date range
-function getComparisonText(dateRange: DateRange): string {
-  const days = Math.ceil(
-    (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
-  )
-
-  if (days <= 7) return 'vs previous 7 days'
-  if (days <= 30) return 'vs previous 30 days'
-  if (days <= 90) return 'vs previous 90 days'
-  if (days <= 365) return 'vs previous 12 months'
-  return 'vs previous period'
+// Helper function to generate comparison text based on period (for metric cards)
+function getPeriodComparisonText(period: string): string {
+  switch (period) {
+    case '7d':
+      return 'vs previous 7 days'
+    case '30d':
+      return 'vs previous 30 days'
+    case '90d':
+      return 'vs previous 90 days'
+    case '12m':
+      return 'vs previous 12 months'
+    default:
+      return 'vs previous 30 days'
+  }
 }
 
 // Interface for calculated metrics
@@ -48,7 +46,6 @@ interface CalculatedMetrics {
 }
 
 export default function OverviewPage() {
-  const router = useRouter()
   const [period, setPeriod] = useState('30d')
   const [isLoading, setIsLoading] = useState(true)
   const { hasDataSources, toggleMockData } = useDataSources()
@@ -65,20 +62,50 @@ export default function OverviewPage() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Generate chart data when date range changes and calculate metrics
+  // Generate chart data when date range changes (for chart only)
   useEffect(() => {
-    const newData = generateMockChartData(dateRange.start, dateRange.end)
-    setChartData(newData)
+    setChartData(generateMockChartData(dateRange.start, dateRange.end))
+  }, [dateRange])
+
+  // Calculate metrics when period changes (for metric cards only)
+  useEffect(() => {
+    // Convert period to date range
+    const getDateRangeFromPeriod = (period: string): DateRange => {
+      const end = new Date()
+      const start = new Date()
+
+      switch (period) {
+        case '7d':
+          start.setDate(end.getDate() - 6)
+          break
+        case '30d':
+          start.setDate(end.getDate() - 29)
+          break
+        case '90d':
+          start.setDate(end.getDate() - 89)
+          break
+        case '12m':
+          start.setFullYear(end.getFullYear() - 1)
+          break
+        default:
+          start.setDate(end.getDate() - 29)
+      }
+
+      return { start, end }
+    }
+
+    const metricDateRange = getDateRangeFromPeriod(period)
+    const newData = generateMockChartData(metricDateRange.start, metricDateRange.end)
 
     // Calculate previous period dates
     const daysDiff = Math.ceil(
-      (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
+      (metricDateRange.end.getTime() - metricDateRange.start.getTime()) / (1000 * 60 * 60 * 24)
     )
 
-    const previousStart = new Date(dateRange.start)
+    const previousStart = new Date(metricDateRange.start)
     previousStart.setDate(previousStart.getDate() - daysDiff - 1)
 
-    const previousEnd = new Date(dateRange.start)
+    const previousEnd = new Date(metricDateRange.start)
     previousEnd.setDate(previousEnd.getDate() - 1)
 
     // Generate mock data for previous period
@@ -146,7 +173,25 @@ export default function OverviewPage() {
         trend: getTrend(avgDurationChange),
       },
     })
-  }, [dateRange])
+
+    // Debug logging
+    console.log('=== METRIC CALCULATIONS ===')
+    console.log('Period:', period)
+    console.log('Metric Date Range:', {
+      start: metricDateRange.start.toISOString().split('T')[0],
+      end: metricDateRange.end.toISOString().split('T')[0],
+      days: daysDiff,
+    })
+    console.log('Current Visitors:', currentVisitors)
+    console.log('Previous Visitors:', previousVisitors)
+    console.log('Change %:', Math.round(visitorsChange * 10) / 10)
+    console.log('Comparison Text:', getPeriodComparisonText(period))
+    console.log('Current Sessions:', currentSessions)
+    console.log('Previous Sessions:', previousSessions)
+    console.log('Current Users:', currentUsers)
+    console.log('Previous Users:', previousUsers)
+    console.log('========================')
+  }, [period])
 
   // Handle connect data source action
   const handleConnectDataSource = () => {
@@ -168,14 +213,6 @@ export default function OverviewPage() {
       })
     }, 0)
   }, [])
-
-  // Map icon names to components for the key metrics
-  const iconMap: Record<string, React.ReactNode> = {
-    Users: <Users className="h-5 w-5 text-muted-foreground" />,
-    TrendingUp: <TrendingUp className="h-5 w-5 text-muted-foreground" />,
-    DollarSign: <DollarSign className="h-5 w-5 text-muted-foreground" />,
-    Clock: <Clock className="h-5 w-5 text-muted-foreground" />,
-  }
 
   // Show empty state if no data sources are connected
   if (!hasDataSources) {
@@ -272,7 +309,7 @@ export default function OverviewPage() {
                 value={calculatedMetrics.visitors.current.toLocaleString()}
                 change={calculatedMetrics.visitors.change}
                 trend={calculatedMetrics.visitors.trend}
-                period={getComparisonText(dateRange)}
+                period={getPeriodComparisonText(period)}
                 icon={<Users className="h-5 w-5 text-muted-foreground" />}
                 loading={false}
               />
@@ -281,7 +318,7 @@ export default function OverviewPage() {
                 value={calculatedMetrics.sessions.current.toLocaleString()}
                 change={calculatedMetrics.sessions.change}
                 trend={calculatedMetrics.sessions.trend}
-                period={getComparisonText(dateRange)}
+                period={getPeriodComparisonText(period)}
                 icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />}
                 loading={false}
               />
@@ -290,7 +327,7 @@ export default function OverviewPage() {
                 value={calculatedMetrics.users.current.toLocaleString()}
                 change={calculatedMetrics.users.change}
                 trend={calculatedMetrics.users.trend}
-                period={getComparisonText(dateRange)}
+                period={getPeriodComparisonText(period)}
                 icon={<Users className="h-5 w-5 text-muted-foreground" />}
                 loading={false}
               />
@@ -299,7 +336,7 @@ export default function OverviewPage() {
                 value={`${Math.floor(calculatedMetrics.avgDuration.current)}m ${Math.floor((calculatedMetrics.avgDuration.current % 1) * 60)}s`}
                 change={calculatedMetrics.avgDuration.change}
                 trend={calculatedMetrics.avgDuration.trend}
-                period={getComparisonText(dateRange)}
+                period={getPeriodComparisonText(period)}
                 icon={<Clock className="h-5 w-5 text-muted-foreground" />}
                 loading={false}
               />
@@ -321,7 +358,12 @@ export default function OverviewPage() {
         </div>
         <div className="rounded-lg border bg-card p-6">
           <LineChart
-            data={chartData}
+            data={chartData.map(d => ({
+              ...d,
+              pageViews: d.pageViews,
+              sessions: d.sessions,
+              users: d.users,
+            }))}
             lines={[
               { key: 'pageViews', name: 'Page Views', color: '#0ea5e9' },
               { key: 'sessions', name: 'Sessions', color: '#10b981' },

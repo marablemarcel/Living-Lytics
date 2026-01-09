@@ -105,7 +105,7 @@ export function MetricCardEnhanced({
       onClick={onClick}
     >
       {/* Subtle gradient background accent */}
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50/50 pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-br from-transparent to-gray-50/50 pointer-events-none" />
 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
         <p className="text-sm font-medium text-gray-600">{title}</p>

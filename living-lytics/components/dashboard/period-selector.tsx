@@ -25,7 +25,7 @@ const periodOptions = [
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-fit min-w-[160px]">
+      <SelectTrigger className="w-fit min-w-40">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-gray-500" />
           <SelectValue placeholder="Select period" />
