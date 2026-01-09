@@ -3,7 +3,12 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(dir:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(npx next lint:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

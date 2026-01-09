@@ -155,6 +155,35 @@ export default function OverviewPage() {
         </div>
       </div>
 
+      {/* Performance Over Time - New LineChart Test */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold">Performance Over Time</h2>
+          <p className="text-sm text-muted-foreground">
+            Track your page views, sessions, and users over the last 7 days
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-6">
+          <LineChart
+            data={[
+              { date: '2024-01-01', pageViews: 1200, sessions: 800, users: 450 },
+              { date: '2024-01-02', pageViews: 1400, sessions: 950, users: 520 },
+              { date: '2024-01-03', pageViews: 1100, sessions: 750, users: 410 },
+              { date: '2024-01-04', pageViews: 1600, sessions: 1100, users: 610 },
+              { date: '2024-01-05', pageViews: 1800, sessions: 1200, users: 680 },
+              { date: '2024-01-06', pageViews: 1500, sessions: 1000, users: 550 },
+              { date: '2024-01-07', pageViews: 2100, sessions: 1400, users: 780 },
+            ]}
+            lines={[
+              { key: 'pageViews', name: 'Page Views', color: '#0ea5e9' },
+              { key: 'sessions', name: 'Sessions', color: '#10b981' },
+              { key: 'users', name: 'Users', color: '#8b5cf6' },
+            ]}
+            height={350}
+          />
+        </div>
+      </div>
+
       {/* Detailed Metrics Section */}
       <div className="space-y-4">
         <div>

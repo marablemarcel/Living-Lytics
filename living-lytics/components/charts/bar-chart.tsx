@@ -11,6 +11,7 @@ import {
   Legend,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CHART_COLORS, CHART_COLOR_ARRAY, CHART_CONFIG } from '@/lib/constants/chart-colors'
 
 interface BarChartProps {
   data: any[]
@@ -22,14 +23,11 @@ interface BarChartProps {
   showLegend?: boolean
 }
 
-// Default color palette matching our design system
+// Default color palette using standardized chart colors
 const defaultColors = [
-  '#3B82F6', // blue-500
-  '#8B5CF6', // violet-500
-  '#10B981', // green-500
-  '#F59E0B', // amber-500
-  '#EF4444', // red-500
-  '#06B6D4', // cyan-500
+  ...CHART_COLOR_ARRAY,
+  '#EF4444', // red-500 - for additional series
+  '#06B6D4', // cyan-500 - for additional series
 ]
 
 // Custom tooltip component
@@ -76,7 +74,7 @@ export default function BarChart({
         <ResponsiveContainer width="100%" height={height}>
           <RechartsBarChart
             data={data}
-            margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+            margin={CHART_CONFIG.margin}
           >
             <CartesianGrid
               strokeDasharray="3 3"
