@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { toast } from 'sonner'
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { Button } from '@/components/ui/button'
 import { BarChart3 } from 'lucide-react'
@@ -17,23 +17,23 @@ import {
   generateTrafficSources,
   generateDeviceData,
   generateTopPages,
+  type MetricDataPoint,
 } from '@/lib/data/mock-data'
 
 export default function AnalyticsPage() {
+  const router = useRouter()
   const { hasDataSources, toggleMockData } = useDataSources()
   const [dateRange, setDateRange] = useState<DateRange>(getLast30Days())
-  const [chartData, setChartData] = useState<any[]>([])
 
   // Handle connect data source action
   const handleConnectDataSource = () => {
-    toast.info('Data source connections coming soon in Week 5!')
+    router.push('/dashboard/sources')
   }
 
-  // Generate chart data when date range changes
-  useEffect(() => {
-    const data = generateMockMetrics(dateRange.start, dateRange.end)
-    setChartData(data)
-  }, [dateRange])
+  const chartData = useMemo<MetricDataPoint[]>(
+    () => generateMockMetrics(dateRange.start, dateRange.end),
+    [dateRange]
+  )
 
   // Get static data for other charts
   const trafficSources = generateTrafficSources()
@@ -219,7 +219,7 @@ export default function AnalyticsPage() {
               <tbody>
                 {topPages.map((page, index) => (
                   <tr key={index} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="p-4 font-medium">{page.page}</td>
+                    <td className="p-4 font-medium">{page.name}</td>
                     <td className="p-4 text-right">{page.pageViews.toLocaleString()}</td>
                     <td className="p-4 text-right">{Math.floor(page.avgDuration / 60)}m {page.avgDuration % 60}s</td>
                     <td className="p-4 text-right">{page.bounceRate.toFixed(1)}%</td>

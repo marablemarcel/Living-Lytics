@@ -98,3 +98,36 @@ export function mapPlatformName(platformName: string): string {
   }
   return mapping[platformName] || platformName
 }
+
+/**
+ * Check if a connection needs attention (expired, error, etc.)
+ */
+export function getConnectionHealth(connection: {
+  connection_status: 'connected' | 'disconnected' | 'error' | 'syncing'
+  credentials?: { expires_at?: string | null } | null
+}): {
+  status: 'healthy' | 'expiring' | 'expired' | 'error'
+  message?: string
+} {
+  if (connection.connection_status === 'error') {
+    return { status: 'error', message: 'Connection error - please reconnect' }
+  }
+
+  if (!connection.credentials?.expires_at) {
+    return { status: 'healthy' }
+  }
+
+  const expiresAt = new Date(connection.credentials.expires_at)
+  const now = new Date()
+  const hoursUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60)
+
+  if (hoursUntilExpiry < 0) {
+    return { status: 'expired', message: 'Token expired - will refresh on next sync' }
+  }
+
+  if (hoursUntilExpiry < 24) {
+    return { status: 'expiring', message: 'Token expires soon' }
+  }
+
+  return { status: 'healthy' }
+}

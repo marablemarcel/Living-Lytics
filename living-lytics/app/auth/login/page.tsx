@@ -55,13 +55,7 @@ export default function LoginPage() {
       console.log('Login successful! Redirecting...');
       toast.success('Welcome back!');
 
-      try {
-        router.push('/dashboard');
-        console.log('router.push called');
-      } catch (err) {
-        console.error('Router push failed:', err);
-        window.location.href = '/dashboard';
-      }
+      router.push('/dashboard');
     } catch (err) {
       console.error('Unexpected error caught:', err);
       toast.error('An unexpected error occurred. Please try again.');
@@ -125,7 +119,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link
               href="/auth/signup"
               className="font-medium text-primary hover:underline"

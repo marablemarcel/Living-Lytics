@@ -17,7 +17,7 @@ export async function signUp(email: string, password: string) {
     }
 
     return { data, error: null };
-  } catch (err) {
+  } catch {
     return { data: null, error: 'An unexpected error occurred during signup' };
   }
 }
@@ -43,7 +43,7 @@ export async function signIn(email: string, password: string) {
 
     console.log('Returning:', { data, error: null });
     return { data, error: null };
-  } catch (err) {
+  } catch {
     console.log('Returning:', { data: null, error: 'An unexpected error occurred during sign in' });
     return { data: null, error: 'An unexpected error occurred during sign in' };
   }
@@ -60,7 +60,7 @@ export async function signOut() {
     }
 
     return { data: true, error: null };
-  } catch (err) {
+  } catch {
     return { data: null, error: 'An unexpected error occurred during sign out' };
   }
 }
@@ -79,7 +79,7 @@ export async function getCurrentUser() {
     }
 
     return { data: user, error: null };
-  } catch (err) {
+  } catch {
     return { data: null, error: 'An unexpected error occurred while fetching user' };
   }
 }
@@ -97,7 +97,7 @@ export async function resetPassword(email: string) {
     }
 
     return { data, error: null };
-  } catch (err) {
+  } catch {
     return { data: null, error: 'An unexpected error occurred during password reset' };
   }
 }

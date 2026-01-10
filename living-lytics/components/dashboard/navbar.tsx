@@ -34,9 +34,6 @@ const getPageTitle = (pathname: string): string => {
 }
 
 const getBreadcrumbs = (pathname: string): BreadcrumbItem[] => {
-  const segments = pathname.split('/').filter(Boolean)
-  const page = segments[segments.length - 1] || 'overview'
-
   return [
     {
       label: getPageTitle(pathname),

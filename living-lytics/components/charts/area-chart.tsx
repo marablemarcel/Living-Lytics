@@ -27,6 +27,18 @@ export interface AreaChartData {
   [key: string]: string | number
 }
 
+type ChartTooltipEntry = {
+  name?: string
+  value?: string | number
+  color?: string
+}
+
+type LegendEntry = {
+  dataKey?: string
+  value?: string
+  color?: string
+}
+
 // Main Component Props
 export interface AreaChartProps {
   data: AreaChartData[]
@@ -57,7 +69,7 @@ const formatNumber = (value: number): string => {
  */
 interface CustomTooltipProps {
   active?: boolean
-  payload?: any[]
+  payload?: ChartTooltipEntry[]
   label?: string
 }
 
@@ -75,7 +87,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 
       {/* Metric Values */}
       <div className="space-y-1">
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index: number) => (
           <div key={`item-${index}`} className="flex items-center gap-2">
             {/* Color Indicator */}
             <div
@@ -160,12 +172,15 @@ export default function AreaChart({
   }
 
   // Custom legend renderer for interactive legend
-  const renderCustomLegend = (props: any) => {
-    const { payload } = props
+  const renderCustomLegend = ({ payload }: { payload?: LegendEntry[] }) => {
+    const legendPayload = (payload ?? []).filter(
+      (entry): entry is LegendEntry & { dataKey: string } =>
+        typeof entry.dataKey === 'string'
+    )
 
     return (
       <div className="flex flex-wrap items-center justify-center gap-4 pt-5">
-        {payload.map((entry: any, index: number) => {
+        {legendPayload.map((entry, index: number) => {
           const isHidden = hiddenAreas.includes(entry.dataKey)
 
           return (
@@ -183,7 +198,7 @@ export default function AreaChart({
 
               {/* Area name */}
               <span className="text-sm text-gray-700">
-                {entry.value}
+                {entry.value ?? entry.dataKey}
               </span>
             </div>
           )

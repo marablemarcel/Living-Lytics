@@ -56,7 +56,7 @@ export async function getProfile(
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (error) {
       return { data: null, error: error.message }

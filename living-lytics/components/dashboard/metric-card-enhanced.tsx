@@ -3,6 +3,18 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowUp, ArrowDown, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+const TREND_ICON_MAP = {
+  up: ArrowUp,
+  down: ArrowDown,
+  neutral: Minus,
+} as const
+
+const TREND_COLOR_MAP = {
+  up: 'text-green-600 bg-green-50',
+  down: 'text-red-600 bg-red-50',
+  neutral: 'text-gray-600 bg-gray-50',
+} as const
+
 interface MetricCardEnhancedProps {
   title: string
   value: string | number
@@ -51,33 +63,8 @@ export function MetricCardEnhanced({
     }
   }
 
-  // Determine trend styling
-  const getTrendColor = () => {
-    switch (trend) {
-      case 'up':
-        return 'text-green-600 bg-green-50'
-      case 'down':
-        return 'text-red-600 bg-red-50'
-      case 'neutral':
-      default:
-        return 'text-gray-600 bg-gray-50'
-    }
-  }
-
-  const getTrendIcon = () => {
-    switch (trend) {
-      case 'up':
-        return ArrowUp
-      case 'down':
-        return ArrowDown
-      case 'neutral':
-      default:
-        return Minus
-    }
-  }
-
-  const TrendIcon = getTrendIcon()
-  const trendColor = getTrendColor()
+  const TrendIcon = TREND_ICON_MAP[trend]
+  const trendColor = TREND_COLOR_MAP[trend]
 
   // Loading skeleton state
   if (loading) {

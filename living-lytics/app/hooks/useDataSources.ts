@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 interface DataSource {
   id: string
@@ -25,25 +25,14 @@ const STORAGE_KEY = 'dev_show_mock_data'
  * In production, will check for actual connected data sources
  */
 export function useDataSources(): UseDataSourcesReturn {
-  const [hasDataSources, setHasDataSources] = useState(false)
-  const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    // Check if we're in development mode
+  const [hasDataSources, setHasDataSources] = useState(() => {
     const isDevelopment = process.env.NODE_ENV === 'development'
-
     if (isDevelopment && typeof window !== 'undefined') {
-      // Check localStorage flag for development mock data
-      const showMockData = localStorage.getItem(STORAGE_KEY) === 'true'
-      setHasDataSources(showMockData)
-    } else {
-      // In production, check for actual data sources
-      // TODO: Implement real data source check in Week 5
-      setHasDataSources(false)
+      return localStorage.getItem(STORAGE_KEY) === 'true'
     }
-
-    setLoading(false)
-  }, [])
+    return false
+  })
+  const loading = false
 
   /**
    * Toggle the mock data flag in development mode

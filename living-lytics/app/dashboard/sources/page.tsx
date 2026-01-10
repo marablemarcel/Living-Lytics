@@ -6,6 +6,7 @@ import { Activity, Instagram, ShoppingBag, Mail, Search, MessageCircle } from 'l
 import { toast } from 'sonner'
 import { SourceCard } from '@/components/sources/source-card'
 import { EmptySourcesState } from '@/components/sources/empty-sources-state'
+import { ConnectionDetail } from '@/components/sources/connection-detail'
 import {
   getUserDataSources,
   disconnectDataSource,
@@ -101,6 +102,7 @@ export default function SourcesPage() {
   // Store real connections from database
   const [connections, setConnections] = useState<DataSource[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState<string | null>(null)
 
   // Track connected sources count with computed platforms
   const [platforms, setPlatforms] = useState<Platform[]>(
@@ -213,11 +215,9 @@ export default function SourcesPage() {
     }
   }
 
-  const handleDisconnect = async (platformId: string) => {
-    // Find the connection for this platform
-    const connection = connections.find(
-      (conn) => mapPlatformName(conn.platform) === platformId
-    )
+  const handleDisconnect = async (sourceId: string, platformName: string) => {
+    const platformId = mapPlatformName(platformName)
+    const connection = connections.find((conn) => conn.id === sourceId)
 
     if (!connection) {
       toast.error('Connection not found')
@@ -225,7 +225,11 @@ export default function SourcesPage() {
     }
 
     // Confirm disconnect
-    if (!confirm(`Are you sure you want to disconnect ${platforms.find((p) => p.id === platformId)?.name}?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to disconnect ${platforms.find((p) => p.id === platformId)?.name}?`
+      )
+    ) {
       return
     }
 
@@ -246,6 +250,32 @@ export default function SourcesPage() {
         prev.map((p) => (p.id === platformId ? { ...p, status: 'connected' } : p))
       )
       toast.error('Failed to disconnect platform')
+    }
+  }
+
+  const handleSync = async (sourceId: string) => {
+    setRefreshing(sourceId)
+
+    try {
+      const response = await fetch(`/api/sources/${sourceId}/sync`, {
+        method: 'POST',
+      })
+
+      const body = await response.json().catch(() => null) as { error?: string; message?: string } | null
+
+      if (!response.ok) {
+        console.error('Sync failed:', response.status, body)
+        toast.error(body?.error ?? 'Failed to sync data')
+        return
+      }
+
+      toast.success(body?.message ?? 'Data synced successfully')
+      await loadConnections()
+    } catch (error) {
+      console.error('Sync error:', error)
+      toast.error('Failed to sync data')
+    } finally {
+      setRefreshing(null)
     }
   }
 
@@ -275,6 +305,24 @@ export default function SourcesPage() {
       {/* Empty State - Show if no connections and not loading */}
       {!loading && connectedCount === 0 && <EmptySourcesState onBrowseSources={scrollToSources} />}
 
+      {/* Connected Sources */}
+      {connections.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Connected Sources</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {connections.map((connection) => (
+              <ConnectionDetail
+                key={connection.id}
+                connection={connection}
+                onRefresh={handleSync}
+                onDisconnect={(id) => handleDisconnect(id, connection.platform)}
+                refreshing={refreshing === connection.id}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Available Now Section */}
       <div ref={availableSourcesRef}>
         <h2 className="text-xl font-semibold mb-4">Available Now</h2>
@@ -288,7 +336,18 @@ export default function SourcesPage() {
               status={platform.status}
               lastSync={platform.lastSync}
               onConnect={() => handleConnect(platform.id)}
-              onDisconnect={() => handleDisconnect(platform.id)}
+              onDisconnect={() => {
+                const connection = connections.find(
+                  (conn) => mapPlatformName(conn.platform) === platform.id
+                )
+
+                if (!connection) {
+                  toast.error('Connection not found')
+                  return
+                }
+
+                handleDisconnect(connection.id, connection.platform)
+              }}
               onManage={() => handleManage(platform.id)}
             />
           ))}

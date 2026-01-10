@@ -58,8 +58,20 @@ const formatNumber = (value: number): string => {
  */
 interface CustomTooltipProps {
   active?: boolean
-  payload?: any[]
+  payload?: ChartTooltipEntry[]
   label?: string
+}
+
+type ChartTooltipEntry = {
+  name?: string
+  value?: string | number
+  color?: string
+}
+
+type LegendEntry = {
+  dataKey?: string
+  value?: string
+  color?: string
 }
 
 const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
@@ -76,7 +88,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 
       {/* Metric Values */}
       <div className="space-y-1">
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index: number) => (
           <div key={`item-${index}`} className="flex items-center gap-2">
             {/* Color Indicator */}
             <div
@@ -162,12 +174,15 @@ export default function LineChart({
   }
 
   // Custom legend renderer for interactive legend
-  const renderCustomLegend = (props: any) => {
-    const { payload } = props
+  const renderCustomLegend = ({ payload }: { payload?: LegendEntry[] }) => {
+    const legendPayload = (payload ?? []).filter(
+      (entry): entry is LegendEntry & { dataKey: string } =>
+        typeof entry.dataKey === 'string'
+    )
 
     return (
       <div className="flex flex-wrap items-center justify-center gap-4 pt-5">
-        {payload.map((entry: any, index: number) => {
+        {legendPayload.map((entry, index: number) => {
           const isHidden = hiddenLines.includes(entry.dataKey)
 
           return (
@@ -185,7 +200,7 @@ export default function LineChart({
 
               {/* Line name */}
               <span className="text-sm text-gray-700">
-                {entry.value}
+                {entry.value ?? entry.dataKey}
               </span>
             </div>
           )

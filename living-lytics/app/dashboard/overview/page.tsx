@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Users, TrendingUp, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { MetricCardEnhanced } from '@/components/dashboard/metric-card-enhanced'
@@ -46,6 +47,7 @@ interface CalculatedMetrics {
 }
 
 export default function OverviewPage() {
+  const router = useRouter()
   const [period, setPeriod] = useState('30d')
   const [isLoading, setIsLoading] = useState(true)
   const { hasDataSources, toggleMockData } = useDataSources()
@@ -195,10 +197,7 @@ export default function OverviewPage() {
 
   // Handle connect data source action
   const handleConnectDataSource = () => {
-    // For now, show a toast message
-    toast.info('Data source connections coming soon in Week 5!')
-    // Alternatively, navigate to settings:
-    // router.push('/dashboard/settings')
+    router.push('/dashboard/sources')
   }
 
   // Handle date range change

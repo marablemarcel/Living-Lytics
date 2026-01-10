@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
@@ -12,12 +12,13 @@ import { generateMockInsights } from '@/lib/data/mock-data'
 import { cn } from '@/lib/utils'
 
 export default function InsightsPage() {
+  const router = useRouter()
   const { hasDataSources, toggleMockData } = useDataSources()
   const [filter, setFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
 
   // Handle connect data source action
   const handleConnectDataSource = () => {
-    toast.info('Data source connections coming soon in Week 5!')
+    router.push('/dashboard/sources')
   }
 
   // Get mock insights

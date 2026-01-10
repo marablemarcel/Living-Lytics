@@ -24,6 +24,23 @@ const BUSINESS_TYPES = [
   'Other',
 ] as const;
 
+type ErrorDetails = {
+  message?: string;
+  code?: string;
+};
+
+const getErrorDetails = (err: unknown): ErrorDetails => {
+  if (!err || typeof err !== 'object') {
+    return {};
+  }
+
+  const record = err as Record<string, unknown>;
+  const message = typeof record.message === 'string' ? record.message : undefined;
+  const code = typeof record.code === 'string' ? record.code : undefined;
+
+  return { message, code };
+};
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -91,9 +108,12 @@ export default function OnboardingPage() {
     } catch (err) {
       console.error('Error saving profile:', err);
       console.error('Error details:', JSON.stringify(err, null, 2));
-      if (err && typeof err === 'object') {
-        console.error('Error message:', (err as any).message);
-        console.error('Error code:', (err as any).code);
+      const details = getErrorDetails(err);
+      if (details.message) {
+        console.error('Error message:', details.message);
+      }
+      if (details.code) {
+        console.error('Error code:', details.code);
       }
       setError('Failed to save your information. Please try again.');
       setIsLoading(false);
@@ -125,7 +145,7 @@ export default function OnboardingPage() {
             Welcome to Living Lytics
           </CardTitle>
           <CardDescription className="text-center">
-            Let's get your account set up
+            Let&apos;s get your account set up
           </CardDescription>
           <div className="pt-2">
             <p className="text-sm text-center text-gray-500">

@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ArrowUp, ArrowDown } from "lucide-react"
 
 interface MetricCardProps {

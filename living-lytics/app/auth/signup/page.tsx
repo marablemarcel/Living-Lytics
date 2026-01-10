@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
@@ -36,7 +36,7 @@ export default function SignupPage() {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -45,7 +45,10 @@ export default function SignupPage() {
     },
   });
 
-  const acceptedTerms = watch('acceptedTerms');
+  const acceptedTerms = useWatch({
+    control,
+    name: 'acceptedTerms',
+  }) ?? false;
 
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
@@ -78,7 +81,7 @@ export default function SignupPage() {
           router.push('/auth/login');
         }, 2000);
       }
-    } catch (err) {
+    } catch {
       toast.error('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }

@@ -48,16 +48,24 @@ const formatNumber = (value: number): string => {
  */
 interface CustomTooltipProps {
   active?: boolean
-  payload?: any[]
+  payload?: PieTooltipEntry[]
+}
+
+type PieTooltipEntry = {
+  payload: {
+    name: string
+    value: number
+    percent: number
+  }
 }
 
 const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-  if (!active || !payload || payload.length === 0) {
+  const item = payload?.[0]?.payload
+  if (!active || !item) {
     return null
   }
 
-  const data = payload[0]
-  const { name, value, percent } = data.payload
+  const { name, value, percent } = item
 
   return (
     <div className="rounded-lg border bg-white p-3 shadow-lg">
@@ -195,9 +203,7 @@ export default function PieChart({
   }
 
   // Custom legend renderer
-  const renderCustomLegend = (props: any) => {
-    const { payload } = props
-
+  const renderCustomLegend = () => {
     return (
       <div className="flex flex-wrap items-center justify-center gap-4 pt-5">
         {dataWithColors.map((entry, index) => {
