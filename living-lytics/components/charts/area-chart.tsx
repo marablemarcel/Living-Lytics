@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
+import type { Props as LegendProps } from 'recharts/types/component/DefaultLegendContent'
 import { format, parseISO } from 'date-fns'
 import { ChartWrapper } from './chart-wrapper'
 
@@ -172,8 +173,8 @@ export default function AreaChart({
   }
 
   // Custom legend renderer for interactive legend
-  const renderCustomLegend = ({ payload }: { payload?: LegendEntry[] }) => {
-    const legendPayload = (payload ?? []).filter(
+  const renderCustomLegend = (props: LegendProps) => {
+    const legendPayload = ((props.payload as LegendEntry[]) ?? []).filter(
       (entry): entry is LegendEntry & { dataKey: string } =>
         typeof entry.dataKey === 'string'
     )

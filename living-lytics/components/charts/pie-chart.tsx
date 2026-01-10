@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
+import type { Props as LegendProps } from 'recharts/types/component/DefaultLegendContent'
 import { ChartWrapper } from './chart-wrapper'
 import { CHART_COLOR_ARRAY } from '@/lib/constants/chart-colors'
 
@@ -203,7 +204,7 @@ export default function PieChart({
   }
 
   // Custom legend renderer
-  const renderCustomLegend = () => {
+  const renderCustomLegend = (_props: LegendProps) => {
     return (
       <div className="flex flex-wrap items-center justify-center gap-4 pt-5">
         {dataWithColors.map((entry, index) => {

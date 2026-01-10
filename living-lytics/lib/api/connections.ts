@@ -131,3 +131,4 @@ export function getConnectionHealth(connection: {
 
   return { status: 'healthy' }
 }
+

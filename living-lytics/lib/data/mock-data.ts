@@ -11,6 +11,7 @@ export interface MetricDataPoint {
   users: number;
   bounceRate: number;
   engagementRate: number;
+  [key: string]: string | number;
 }
 
 export interface RevenueDataPoint {
