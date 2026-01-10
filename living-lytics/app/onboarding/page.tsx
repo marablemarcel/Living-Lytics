@@ -86,12 +86,6 @@ export default function OnboardingPage() {
     try {
       const supabase = createClient();
 
-      console.log('Attempting to save profile:', {
-        userId: user.id,
-        businessName,
-        businessType,
-      });
-
       const { error: saveError } = await supabase
         .from('profiles')
         .upsert({

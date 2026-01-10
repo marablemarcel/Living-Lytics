@@ -15,8 +15,6 @@ export async function createProfile(
   businessType: string
 ): Promise<ApiResponse<Profile>> {
   try {
-    console.log('Creating profile with:', { userId, businessName, businessType })
-
     const supabase = createClient()
     const { data, error } = await supabase
       .from('profiles')
@@ -28,8 +26,6 @@ export async function createProfile(
       })
       .select()
       .single()
-
-    console.log('Supabase insert result:', { data, error })
 
     if (error) {
       return { data: null, error: error.message }

@@ -279,10 +279,9 @@ export default function SourcesPage() {
     }
   }
 
-  const handleManage = (platformId: string) => {
+  const handleManage = (_platformId: string) => {
     // TODO: Implement settings modal or page
     toast.info('Platform settings coming soon!')
-    console.log('Managing:', platformId)
   }
 
   const scrollToSources = () => {

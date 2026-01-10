@@ -20,29 +20,24 @@ export async function POST(
     }
 
     // Verify user owns this data source
-    const { data: source, error: fetchError } = await supabase
+    const { data: source } = await supabase
       .from('data_sources')
       .select('*')
       .eq('id', sourceId)
       .maybeSingle()
-
-    // Debug log: show what we found and who is requesting the sync
-    console.log('Sync request:', { sourceId, userId: user.id, source, fetchError })
 
     if (!source) {
       return NextResponse.json({ error: 'Data source not found' }, { status: 404 })
     }
 
     if (source.user_id !== user.id) {
-      console.log('Ownership mismatch for source', { sourceId, ownerId: source.user_id, userId: user.id })
       return NextResponse.json({ error: 'You do not own this data source' }, { status: 403 })
     }
 
     // Refresh token if needed
     try {
       await refreshDataSourceToken(sourceId)
-    } catch (refreshError) {
-      console.log('Token refresh not needed or failed:', refreshError)
+    } catch {
       // Continue anyway - token might still be valid
     }
 

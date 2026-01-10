@@ -175,24 +175,6 @@ export default function OverviewPage() {
         trend: getTrend(avgDurationChange),
       },
     })
-
-    // Debug logging
-    console.log('=== METRIC CALCULATIONS ===')
-    console.log('Period:', period)
-    console.log('Metric Date Range:', {
-      start: metricDateRange.start.toISOString().split('T')[0],
-      end: metricDateRange.end.toISOString().split('T')[0],
-      days: daysDiff,
-    })
-    console.log('Current Visitors:', currentVisitors)
-    console.log('Previous Visitors:', previousVisitors)
-    console.log('Change %:', Math.round(visitorsChange * 10) / 10)
-    console.log('Comparison Text:', getPeriodComparisonText(period))
-    console.log('Current Sessions:', currentSessions)
-    console.log('Previous Sessions:', previousSessions)
-    console.log('Current Users:', currentUsers)
-    console.log('Previous Users:', previousUsers)
-    console.log('========================')
   }, [period])
 
   // Handle connect data source action
@@ -203,14 +185,6 @@ export default function OverviewPage() {
   // Handle date range change
   const handleDateRangeChange = useCallback((range: DateRange) => {
     setDateRange(range)
-
-    // Defer console logging to not block the click handler
-    setTimeout(() => {
-      console.log('Date range changed:', {
-        start: range.start.toISOString(),
-        end: range.end.toISOString(),
-      })
-    }, 0)
   }, [])
 
   // Show empty state if no data sources are connected
