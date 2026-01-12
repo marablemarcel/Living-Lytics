@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { SourceCard } from '@/components/sources/source-card'
 import { EmptySourcesState } from '@/components/sources/empty-sources-state'
 import { ConnectionDetail } from '@/components/sources/connection-detail'
+import { ConfigureGAProperty } from '@/components/sources/configure-ga-property'
 import {
   getUserDataSources,
   disconnectDataSource,
@@ -103,6 +104,8 @@ export default function SourcesPage() {
   const [connections, setConnections] = useState<DataSource[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState<string | null>(null)
+  const [configureOpen, setConfigureOpen] = useState(false)
+  const [configureSource, setConfigureSource] = useState<DataSource | null>(null)
 
   // Track connected sources count with computed platforms
   const [platforms, setPlatforms] = useState<Platform[]>(
@@ -280,7 +283,21 @@ export default function SourcesPage() {
   }
 
   const handleManage = (_platformId: string) => {
-    // TODO: Implement settings modal or page
+    const platformId = _platformId
+    const connection = connections.find(
+      (conn) => mapPlatformName(conn.platform) === platformId
+    )
+
+    if (platformId === 'google-analytics') {
+      if (!connection) {
+        toast.error('Connection not found')
+        return
+      }
+      setConfigureSource(connection)
+      setConfigureOpen(true)
+      return
+    }
+
     toast.info('Platform settings coming soon!')
   }
 
@@ -369,6 +386,19 @@ export default function SourcesPage() {
           ))}
         </div>
       </div>
+
+      <ConfigureGAProperty
+        sourceId={configureSource?.id || ''}
+        currentPropertyId={
+          (configureSource?.credentials as { property_id?: string } | null)?.property_id
+        }
+        open={configureOpen}
+        onOpenChange={setConfigureOpen}
+        onSaved={async () => {
+          await loadConnections()
+          setConfigureSource(null)
+        }}
+      />
     </div>
   )
 }

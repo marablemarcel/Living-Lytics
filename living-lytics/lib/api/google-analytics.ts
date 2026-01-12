@@ -1,4 +1,6 @@
 import { BetaAnalyticsDataClient, protos } from '@google-analytics/data'
+import { OAuth2Client } from 'google-auth-library'
+
 import { decrypt } from '@/lib/oauth/encryption'
 import { createClient } from '@/lib/supabase/server'
 
@@ -11,7 +13,7 @@ type IRow = protos.google.analytics.data.v1beta.IRow
 
 export interface GACredentials {
   access_token: string
-  refresh_token: string
+  refresh_token?: string | null
   expires_at: string
   property_id?: string
 }
@@ -50,6 +52,19 @@ export class GoogleAnalyticsClient {
   }
 
   /**
+   * Create a GA Data client authorized with the decrypted access token.
+   */
+  private createAnalyticsClient(): BetaAnalyticsDataClient {
+    const accessToken = decrypt(this.credentials.access_token)
+    const oauthClient = new OAuth2Client()
+    oauthClient.setCredentials({ access_token: accessToken })
+
+    return new BetaAnalyticsDataClient({
+      authClient: oauthClient,
+    })
+  }
+
+  /**
    * Get analytics data for a date range
    */
   async getMetrics(
@@ -57,16 +72,7 @@ export class GoogleAnalyticsClient {
     startDate: string,
     endDate: string
   ): Promise<GAMetrics[]> {
-    // Decrypt access token
-    const accessToken = decrypt(this.credentials.access_token)
-
-    // Create GA client with OAuth2 credentials
-    // Note: The @google-analytics/data client expects credentials in a specific format
-    const analyticsDataClient = new BetaAnalyticsDataClient({
-      auth: {
-        getAccessToken: async () => ({ token: accessToken }),
-      } as unknown as import('google-auth-library').GoogleAuth,
-    })
+    const analyticsDataClient = this.createAnalyticsClient()
 
     try {
       // Run report
@@ -102,13 +108,7 @@ export class GoogleAnalyticsClient {
    * Get real-time active users
    */
   async getRealtimeUsers(propertyId: string): Promise<number> {
-    const accessToken = decrypt(this.credentials.access_token)
-
-    const analyticsDataClient = new BetaAnalyticsDataClient({
-      auth: {
-        getAccessToken: async () => ({ token: accessToken }),
-      } as unknown as import('google-auth-library').GoogleAuth,
-    })
+    const analyticsDataClient = this.createAnalyticsClient()
 
     try {
       const [response] = await analyticsDataClient.runRealtimeReport({
@@ -136,13 +136,7 @@ export class GoogleAnalyticsClient {
     endDate: string,
     limit: number = 10
   ): Promise<Array<{ page: string; views: number; avgDuration: number }>> {
-    const accessToken = decrypt(this.credentials.access_token)
-
-    const analyticsDataClient = new BetaAnalyticsDataClient({
-      auth: {
-        getAccessToken: async () => ({ token: accessToken }),
-      } as unknown as import('google-auth-library').GoogleAuth,
-    })
+    const analyticsDataClient = this.createAnalyticsClient()
 
     try {
       const [response] = await analyticsDataClient.runReport({
@@ -185,13 +179,7 @@ export class GoogleAnalyticsClient {
     startDate: string,
     endDate: string
   ): Promise<Array<{ source: string; medium: string; sessions: number; users: number }>> {
-    const accessToken = decrypt(this.credentials.access_token)
-
-    const analyticsDataClient = new BetaAnalyticsDataClient({
-      auth: {
-        getAccessToken: async () => ({ token: accessToken }),
-      } as unknown as import('google-auth-library').GoogleAuth,
-    })
+    const analyticsDataClient = this.createAnalyticsClient()
 
     try {
       const [response] = await analyticsDataClient.runReport({

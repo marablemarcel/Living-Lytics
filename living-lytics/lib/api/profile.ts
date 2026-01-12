@@ -76,15 +76,47 @@ export async function updateProfile(
 ): Promise<ApiResponse<Profile>> {
   try {
     const supabase = createClient()
+    
+    // First check if profile exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle()
+    
+    // If profile doesn't exist, create it
+    if (!existingProfile) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          ...updates,
+          subscription_tier: 'free',
+        })
+        .select()
+        .maybeSingle()
+      
+      if (error) {
+        return { data: null, error: error.message }
+      }
+      
+      return { data, error: null }
+    }
+    
+    // Profile exists, update it
     const { data, error } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', userId)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) {
       return { data: null, error: error.message }
+    }
+    
+    if (!data) {
+      return { data: null, error: 'Profile update failed - no data returned' }
     }
 
     return { data, error: null }
