@@ -41,81 +41,94 @@ export async function fetchMetrics(
   startDate: string,
   endDate: string
 ): Promise<MetricDataPoint[]> {
-  const supabase = await createClient()
+  // Import cache utilities
+  const { cachedFetch, generateCacheKey } = await import('@/lib/utils/cache-utils')
 
-  // Get user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Generate cache key
+  const cacheKey = generateCacheKey('metrics', { sourceId, startDate, endDate })
 
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  // Use cached fetch with 5-minute TTL
+  return cachedFetch(
+    cacheKey,
+    async () => {
+      const supabase = await createClient()
 
-  // Fetch all metrics for the date range
-  const { data, error } = await supabase
-    .from('metrics')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('source_id', sourceId)
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date', { ascending: true })
+      // Get user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-  if (error) {
-    console.error('Error fetching metrics:', error)
-    throw error
-  }
-
-  if (!data || data.length === 0) {
-    return []
-  }
-
-  // Group by date
-  const groupedByDate = data.reduce((acc, record) => {
-    if (!acc[record.date]) {
-      acc[record.date] = {
-        date: record.date,
-        pageViews: 0,
-        sessions: 0,
-        users: 0,
-        bounceRate: 0,
-        avgSessionDuration: 0,
-        pagesPerSession: 0,
-        engagementRate: 0,
+      if (!user) {
+        throw new Error('Unauthorized')
       }
-    }
 
-    // Map metric_type to property
-    switch (record.metric_type) {
-      case 'page_views':
-        acc[record.date].pageViews = record.metric_value
-        break
-      case 'sessions':
-        acc[record.date].sessions = record.metric_value
-        break
-      case 'users':
-        acc[record.date].users = record.metric_value
-        break
-      case 'bounce_rate':
-        acc[record.date].bounceRate = record.metric_value
-        break
-      case 'avg_session_duration':
-        acc[record.date].avgSessionDuration = record.metric_value
-        break
-      case 'pages_per_session':
-        acc[record.date].pagesPerSession = record.metric_value
-        break
-      case 'engagement_rate':
-        acc[record.date].engagementRate = record.metric_value
-        break
-    }
+      // Fetch all metrics for the date range
+      const { data, error } = await supabase
+        .from('metrics')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('source_id', sourceId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true })
 
-    return acc
-  }, {} as Record<string, MetricDataPoint>)
+      if (error) {
+        console.error('Error fetching metrics:', error)
+        throw error
+      }
 
-  // Convert to array and sort by date
-  return Object.values(groupedByDate).sort((a, b) => a.date.localeCompare(b.date))
+      if (!data || data.length === 0) {
+        return []
+      }
+
+      // Group by date
+      const groupedByDate = data.reduce((acc, record) => {
+        if (!acc[record.date]) {
+          acc[record.date] = {
+            date: record.date,
+            pageViews: 0,
+            sessions: 0,
+            users: 0,
+            bounceRate: 0,
+            avgSessionDuration: 0,
+            pagesPerSession: 0,
+            engagementRate: 0,
+          }
+        }
+
+        // Map metric_type to property
+        switch (record.metric_type) {
+          case 'page_views':
+            acc[record.date].pageViews = record.metric_value
+            break
+          case 'sessions':
+            acc[record.date].sessions = record.metric_value
+            break
+          case 'users':
+            acc[record.date].users = record.metric_value
+            break
+          case 'bounce_rate':
+            acc[record.date].bounceRate = record.metric_value
+            break
+          case 'avg_session_duration':
+            acc[record.date].avgSessionDuration = record.metric_value
+            break
+          case 'pages_per_session':
+            acc[record.date].pagesPerSession = record.metric_value
+            break
+          case 'engagement_rate':
+            acc[record.date].engagementRate = record.metric_value
+            break
+        }
+
+        return acc
+      }, {} as Record<string, MetricDataPoint>)
+
+      // Convert to array and sort by date
+      return (Object.values(groupedByDate) as MetricDataPoint[]).sort((a, b) => a.date.localeCompare(b.date))
+    },
+    { ttl: 5 * 60 * 1000 } // 5 minutes
+  )
 }
 
 /**

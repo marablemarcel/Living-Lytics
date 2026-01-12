@@ -8,6 +8,7 @@ import { SourceCard } from '@/components/sources/source-card'
 import { EmptySourcesState } from '@/components/sources/empty-sources-state'
 import { ConnectionDetail } from '@/components/sources/connection-detail'
 import { ConfigureGAProperty } from '@/components/sources/configure-ga-property'
+import { SyncAllButton } from '@/components/dashboard/sync-all-button'
 import {
   getUserDataSources,
   disconnectDataSource,
@@ -197,11 +198,7 @@ export default function SourcesPage() {
         window.location.href = '/api/oauth/google'
         break
       case 'facebook-instagram':
-        // Facebook OAuth - coming in future implementation
-        toast.info('Facebook & Instagram connection coming soon!')
-        setPlatforms((prev) =>
-          prev.map((p) => (p.id === platformId ? { ...p, status: 'disconnected' } : p))
-        )
+        window.location.href = '/api/oauth/facebook'
         break
       case 'google-ads':
         // Google Ads OAuth - coming in future implementation
@@ -311,11 +308,14 @@ export default function SourcesPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Data Sources</h1>
-        <p className="text-muted-foreground">
-          Connect your marketing platforms to start tracking metrics
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Data Sources</h1>
+          <p className="text-muted-foreground">
+            Connect your marketing platforms to start tracking metrics
+          </p>
+        </div>
+        {connectedCount > 0 && <SyncAllButton onSyncComplete={loadConnections} />}
       </div>
 
       {/* Empty State - Show if no connections and not loading */}

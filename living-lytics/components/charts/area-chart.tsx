@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -131,7 +131,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
  * />
  * ```
  */
-export default function AreaChart({
+const AreaChart = React.memo(function AreaChart({
   data,
   areas,
   height = 300,
@@ -291,4 +291,6 @@ export default function AreaChart({
       </RechartsAreaChart>
     </ResponsiveContainer>
   )
-}
+})
+
+export default AreaChart

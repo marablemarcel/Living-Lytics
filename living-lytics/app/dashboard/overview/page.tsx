@@ -17,6 +17,7 @@ interface MetricData {
   users: number
   bounceRate: number
   avgSessionDuration: number
+  [key: string]: string | number // Index signature for compatibility with LineChartData
 }
 
 export default function OverviewPage() {
