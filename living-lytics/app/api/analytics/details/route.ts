@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
         const { client, propertyId } = gaData;
 
         // Fetch data with individual error handling
-        let topPages = [];
-        let trafficSources = [];
+        let topPages: any[] = [];
+        let trafficSources: any[] = [];
 
         try {
             topPages = await client.getTopPages(

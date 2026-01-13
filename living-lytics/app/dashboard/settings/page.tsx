@@ -55,6 +55,7 @@ export default function SettingsPage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [connectedSourcesCount, setConnectedSourcesCount] = useState<number>(0)
 
   // Profile form
   const {
@@ -104,8 +105,21 @@ export default function SettingsPage() {
       setIsLoadingProfile(false)
     }
 
+    const fetchConnectedSources = async () => {
+      try {
+        const response = await fetch('/api/sources')
+        if (response.ok) {
+          const data = await response.json()
+          setConnectedSourcesCount(data.connectedCount || 0)
+        }
+      } catch (error) {
+        console.error('Failed to fetch connected sources:', error)
+      }
+    }
+
     if (!authLoading) {
       fetchProfile()
+      fetchConnectedSources()
     }
   }, [user, authLoading, setProfileValue])
 
@@ -460,8 +474,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-semibold">0</p>
-                  <p className="text-xs text-muted-foreground">Coming in Week 5</p>
+                  <p className="text-lg font-semibold">{connectedSourcesCount}</p>
                 </div>
               </div>
             </div>
