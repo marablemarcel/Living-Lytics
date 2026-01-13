@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users, TrendingUp, Clock, RefreshCw } from 'lucide-react'
+import { Users, TrendingUp, Clock, RefreshCw, Lightbulb } from 'lucide-react'
 import { MetricCardEnhanced } from '@/components/dashboard/metric-card-enhanced'
 import { Button } from '@/components/ui/button'
 import LineChart from '@/components/charts/line-chart'
@@ -201,6 +201,130 @@ export default function OverviewPage() {
             height={350}
           />
         </div>
+      </div>
+
+      {/* AI Insights Section */}
+      <InsightsSection />
+    </div>
+  )
+}
+
+// Insights Section Component
+function InsightsSection() {
+  const router = useRouter()
+  const [insights, setInsights] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchInsights() {
+      try {
+        const response = await fetch('/api/insights/generate?limit=3')
+        if (response.ok) {
+          const data = await response.json()
+          // Filter for high priority, non-dismissed insights
+          const topInsights = (data.insights || [])
+            .filter((i: any) => !i.dismissed && i.priority === 'high')
+            .slice(0, 3)
+          setInsights(topInsights)
+        }
+      } catch (error) {
+        console.error('Error fetching insights:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchInsights()
+  }, [])
+
+  const newInsightsCount = insights.filter(i => !i.viewed_at).length
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">AI Insights</h2>
+        </div>
+        <div className="flex items-center justify-center py-8 border rounded-lg">
+          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
+  }
+
+  if (insights.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">AI Insights</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/dashboard/insights')}
+            className="gap-1"
+          >
+            View All
+            <TrendingUp className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="border rounded-lg p-6 text-center space-y-2">
+          <Lightbulb className="h-10 w-10 text-muted-foreground mx-auto" />
+          <p className="text-sm text-muted-foreground">
+            No insights yet. Visit the Insights page to generate AI-powered recommendations.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold">AI Insights</h2>
+          {newInsightsCount > 0 && (
+            <div className="relative">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+                {newInsightsCount}
+              </span>
+            </div>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push('/dashboard/insights')}
+          className="gap-1"
+        >
+          View All
+          <TrendingUp className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="grid gap-3">
+        {insights.map((insight) => (
+          <div
+            key={insight.id}
+            className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => router.push('/dashboard/insights')}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <Lightbulb className="h-4 w-4" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm capitalize">{insight.category} Insight</p>
+                  {!insight.viewed_at && (
+                    <span className="flex h-2 w-2 rounded-full bg-blue-500" />
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {insight.content}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

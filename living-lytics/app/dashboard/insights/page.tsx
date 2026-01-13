@@ -1,100 +1,186 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Lightbulb, TrendingUp, Users, DollarSign, Activity, AlertCircle, Info, CheckCircle } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Lightbulb, RefreshCw } from 'lucide-react'
 import { useDataSources } from '@/app/hooks/useDataSources'
-import { generateMockInsights } from '@/lib/data/mock-data'
 import { cn } from '@/lib/utils'
+import { InsightCard, type Insight } from '@/components/insights/insight-card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function InsightsPage() {
   const router = useRouter()
-  const { hasDataSources, toggleMockData } = useDataSources()
+  const { hasDataSources } = useDataSources()
   const [filter, setFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'viewed' | 'dismissed'>('all')
+  const [insights, setInsights] = useState<Insight[]>([])
+  const [loading, setLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
 
   // Handle connect data source action
   const handleConnectDataSource = () => {
     router.push('/dashboard/sources')
   }
 
-  // Get mock insights
-  const allInsights = generateMockInsights()
-  const filteredInsights = filter === 'all'
-    ? allInsights
-    : allInsights.filter(insight => insight.priority === filter)
-
-  // Get icon for category
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'traffic':
-        return <Users className="h-4 w-4" />
-      case 'engagement':
-        return <Activity className="h-4 w-4" />
-      case 'conversion':
-        return <TrendingUp className="h-4 w-4" />
-      case 'revenue':
-        return <DollarSign className="h-4 w-4" />
-      default:
-        return <Lightbulb className="h-4 w-4" />
+  // Handle generate insights action
+  const handleGenerateInsights = async () => {
+    setGenerating(true)
+    try {
+      // Calculate date range (last 30 days)
+      const endDate = new Date()
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      const startDateStr = startDate.toISOString().split('T')[0]
+      const endDateStr = endDate.toISOString().split('T')[0]
+      
+      // Fetch aggregated metrics from analytics API
+      const metricsResponse = await fetch(`/api/metrics/aggregated?startDate=${startDateStr}&endDate=${endDateStr}`)
+      if (!metricsResponse.ok) {
+        throw new Error('Failed to fetch metrics')
+      }
+      
+      const metricsData = await metricsResponse.json()
+      
+      // Use totals for insight generation
+      const metrics = metricsData.totals || metricsData
+      
+      // Call insight generation API
+      const insightResponse = await fetch('/api/insights/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metrics: metrics,
+          platform: 'all',
+          dateRange: {
+            start: startDate.toISOString(),
+            end: endDate.toISOString(),
+          },
+        }),
+      })
+      
+      if (!insightResponse.ok) {
+        const errorData = await insightResponse.json()
+        throw new Error(errorData.details || 'Failed to generate insight')
+      }
+      
+      // Refresh insights list
+      await fetchInsights()
+    } catch (error) {
+      console.error('Error generating insights:', error)
+      alert(error instanceof Error ? error.message : 'Failed to generate insights. Please ensure OpenAI API key is configured.')
+    } finally {
+      setGenerating(false)
     }
   }
 
-  // Get priority badge styling and icon
-  const getPriorityConfig = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return {
-          icon: <AlertCircle className="h-3 w-3" />,
-          variant: 'destructive' as const,
-          className: 'bg-red-500 hover:bg-red-600',
-        }
-      case 'medium':
-        return {
-          icon: <Info className="h-3 w-3" />,
-          variant: 'default' as const,
-          className: 'bg-blue-500 hover:bg-blue-600',
-        }
-      case 'low':
-        return {
-          icon: <CheckCircle className="h-3 w-3" />,
-          variant: 'secondary' as const,
-          className: 'bg-gray-500 hover:bg-gray-600',
-        }
-      default:
-        return {
-          icon: null,
-          variant: 'outline' as const,
-          className: '',
-        }
+  // Fetch insights
+  const fetchInsights = async () => {
+    if (!hasDataSources) {
+      setInsights([])
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/insights/generate?limit=50')
+      if (!response.ok) throw new Error('Failed to fetch insights')
+      
+      const data = await response.json()
+      setInsights(data.insights || [])
+    } catch (error) {
+      console.error('Error fetching insights:', error)
+    } finally {
+      setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchInsights()
+  }, [hasDataSources])
+
+  // Handle insight actions
+  const handleView = async (id: string) => {
+    try {
+      await fetch(`/api/insights/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'view' }),
+      })
+      
+      // Update local state
+      setInsights(prev => prev.map(insight => 
+        insight.id === id 
+          ? { ...insight, viewed_at: new Date().toISOString() }
+          : insight
+      ))
+    } catch (error) {
+      console.error('Error marking insight as viewed:', error)
+    }
+  }
+
+  const handleDismiss = async (id: string) => {
+    try {
+      await fetch(`/api/insights/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'dismiss' }),
+      })
+      
+      // Update local state
+      setInsights(prev => prev.map(insight => 
+        insight.id === id 
+          ? { ...insight, dismissed: true }
+          : insight
+      ))
+    } catch (error) {
+      console.error('Error dismissing insight:', error)
+    }
+  }
+
+  const handleFeedback = async (id: string, feedback: 'helpful' | 'not_helpful') => {
+    try {
+      await fetch(`/api/insights/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback }),
+      })
+      
+      // Update local state
+      setInsights(prev => prev.map(insight => 
+        insight.id === id 
+          ? { ...insight, feedback, feedback_at: new Date().toISOString() }
+          : insight
+      ))
+    } catch (error) {
+      console.error('Error submitting feedback:', error)
+    }
+  }
+
+  // Filter insights
+  const filteredInsights = insights.filter(insight => {
+    // Priority filter
+    if (filter !== 'all' && insight.priority !== filter) return false
+    
+    // Status filter
+    if (statusFilter === 'new' && (insight.viewed_at || insight.dismissed)) return false
+    if (statusFilter === 'viewed' && (!insight.viewed_at || insight.dismissed)) return false
+    if (statusFilter === 'dismissed' && !insight.dismissed) return false
+    
+    return true
+  })
 
   // Show empty state if no data sources are connected
   if (!hasDataSources) {
     return (
       <div className="space-y-6">
-        {/* Dev-only Toggle */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-yellow-800">
-                Development Mode: {hasDataSources ? 'Showing mock data' : 'Showing empty state'}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleMockData}
-              >
-                Toggle Mock Data
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -118,123 +204,92 @@ export default function InsightsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Dev-only Toggle */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-yellow-800">
-              Development Mode: {hasDataSources ? 'Showing mock data' : 'Showing empty state'}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleMockData}
-            >
-              Toggle Mock Data
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Page Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">AI Insights</h1>
-        <p className="text-muted-foreground">
-          Actionable recommendations powered by AI
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">AI Insights</h1>
+          <p className="text-muted-foreground">
+            Actionable recommendations powered by AI
+          </p>
+        </div>
+        <Button 
+          onClick={handleGenerateInsights} 
+          disabled={generating}
+          className="gap-2"
+        >
+          {generating ? (
+            <>
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Lightbulb className="h-4 w-4" />
+              Generate Insights
+            </>
+          )}
+        </Button>
       </div>
 
-      {/* Filter Buttons */}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant={filter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('all')}
-        >
-          All Insights
-        </Button>
-        <Button
-          variant={filter === 'high' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('high')}
-          className={cn(filter === 'high' && 'bg-red-500 hover:bg-red-600')}
-        >
-          High Priority
-        </Button>
-        <Button
-          variant={filter === 'medium' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('medium')}
-          className={cn(filter === 'medium' && 'bg-blue-500 hover:bg-blue-600')}
-        >
-          Medium Priority
-        </Button>
-        <Button
-          variant={filter === 'low' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('low')}
-          className={cn(filter === 'low' && 'bg-gray-500 hover:bg-gray-600')}
-        >
-          Low Priority
-        </Button>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4">
+        <Select value={filter} onValueChange={(value: any) => setFilter(value)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priorities</SelectItem>
+            <SelectItem value="high">High Priority</SelectItem>
+            <SelectItem value="medium">Medium Priority</SelectItem>
+            <SelectItem value="low">Low Priority</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="new">New</SelectItem>
+            <SelectItem value="viewed">Viewed</SelectItem>
+            <SelectItem value="dismissed">Dismissed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Insights Grid */}
-      <div className="grid gap-4">
-        {filteredInsights.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">
-                No insights match the selected filter
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : filteredInsights.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center space-y-3">
+              <Lightbulb className="h-12 w-12 text-muted-foreground mx-auto" />
+              <p className="text-muted-foreground">
+                {insights.length === 0 
+                  ? 'No insights yet. Click "Generate Insights" to create your first AI-powered recommendation.'
+                  : 'No insights match the selected filters.'
+                }
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredInsights.map((insight) => {
-            const priorityConfig = getPriorityConfig(insight.priority)
-            return (
-              <Card key={insight.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        {getCategoryIcon(insight.category)}
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <CardTitle className="text-lg">{insight.title}</CardTitle>
-                        <CardDescription className="text-sm">
-                          {insight.description}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Badge className={cn('shrink-0', priorityConfig.className)}>
-                      <span className="flex items-center gap-1">
-                        {priorityConfig.icon}
-                        <span className="capitalize">{insight.priority}</span>
-                      </span>
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-4">
-                      <Badge variant="outline" className="capitalize">
-                        {insight.category}
-                      </Badge>
-                      <span className="font-semibold text-green-600">
-                        {insight.impact}
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground">
-                      {new Date(insight.date).toLocaleDateString()}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
-      </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {filteredInsights.map((insight) => (
+            <InsightCard
+              key={insight.id}
+              insight={insight}
+              onView={handleView}
+              onDismiss={handleDismiss}
+              onFeedback={handleFeedback}
+            />
+          ))}
+        </div>
+      )}
 
       {/* AI Notice */}
       <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
@@ -247,7 +302,7 @@ export default function InsightsPage() {
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300">
                 These insights are automatically generated based on your data patterns and industry benchmarks.
-                New insights are added daily as your data evolves.
+                Click "Generate Insights" to create new recommendations based on your latest data.
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { EmptyState } from '@/components/dashboard/empty-state'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,7 @@ import {
 
 export default function AnalyticsPage() {
   const router = useRouter()
-  const { hasDataSources, toggleMockData } = useDataSources()
+  const { hasDataSources } = useDataSources()
   const [dateRange, setDateRange] = useState<DateRange>(getLast30Days())
 
   // Handle connect data source action
@@ -30,38 +30,97 @@ export default function AnalyticsPage() {
     router.push('/dashboard/sources')
   }
 
-  const chartData = useMemo<MetricDataPoint[]>(
-    () => generateMockMetrics(dateRange.start, dateRange.end),
-    [dateRange]
-  )
+  // State for chart data
+  const [chartData, setChartData] = useState<MetricDataPoint[]>([])
+  const [totals, setTotals] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
 
-  // Get static data for other charts
-  const trafficSources = generateTrafficSources()
-  const deviceData = generateDeviceData()
-  const topPages = generateTopPages()
+  // Fetch real data when sources are connected
+  useEffect(() => {
+    async function fetchData() {
+      // If no data sources connected, show empty state
+      if (!hasDataSources) {
+        setChartData([])
+        return
+      }
+
+      // When we have real data sources, ALWAYS use real data (ignore dev mock flag)
+
+      // Fetch real data
+      setLoading(true)
+      try {
+        // Format dates as YYYY-MM-DD strings
+        const formatDate = (date: Date) => {
+          const year = date.getFullYear()
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const day = String(date.getDate()).padStart(2, '0')
+          return `${year}-${month}-${day}`
+        }
+
+        const queryParams = new URLSearchParams({
+          startDate: formatDate(dateRange.start),
+          endDate: formatDate(dateRange.end),
+        })
+        
+        const response = await fetch(`/api/metrics/aggregated?${queryParams}`)
+        if (!response.ok) throw new Error('Failed to fetch metrics')
+        
+        const data = await response.json()
+        
+        // Transform API data to chart format if needed
+        // API returns MultiPlatformMetricPoint[] which matches chart expectations for keys like pageViews, sessions, users
+        setChartData(data.daily || [])
+        setTotals(data.totals)
+
+        // Fetch additional analytics details (top pages, traffic sources)
+        const detailsParams = new URLSearchParams({
+          startDate: formatDate(dateRange.start),
+          endDate: formatDate(dateRange.end),
+        })
+        
+        const detailsResponse = await fetch(`/api/analytics/details?${detailsParams}`)
+        if (detailsResponse.ok) {
+          const detailsData = await detailsResponse.json()
+          
+          // Transform traffic sources to match chart format
+          const formattedTrafficSources = (detailsData.trafficSources || []).map((item: any) => ({
+            name: item.source === '(direct)' ? 'Direct' : item.source,
+            visitors: item.users,
+            sessions: item.sessions,
+            bounceRate: 0 // Not available from this API
+          }))
+          
+          // Transform top pages to match chart format
+          const formattedTopPages = (detailsData.topPages || []).map((item: any) => ({
+            name: item.page,
+            pageViews: item.views,
+            avgDuration: Math.floor(item.avgDuration),
+            bounceRate: 0 // Not available from this API
+          }))
+          
+          setTrafficSources(formattedTrafficSources)
+          setTopPages(formattedTopPages)
+        }
+      } catch (error) {
+        console.error('Error loading analytics:', error)
+        // Fallback or empty state could go here
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [hasDataSources, dateRange])
+
+  // State for additional chart data
+  const [trafficSources, setTrafficSources] = useState<any[]>([])
+  const [topPages, setTopPages] = useState<any[]>([])
+  const deviceData: any[] = [] // Device data not available from GA4 API yet
 
   // Show empty state if no data sources are connected
   if (!hasDataSources) {
     return (
       <div className="space-y-6">
-        {/* Dev-only Toggle */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-yellow-800">
-                Development Mode: {hasDataSources ? 'Showing mock data' : 'Showing empty state'}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleMockData}
-              >
-                Toggle Mock Data
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -85,23 +144,6 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Dev-only Toggle */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-yellow-800">
-              Development Mode: {hasDataSources ? 'Showing mock data' : 'Showing empty state'}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleMockData}
-            >
-              Toggle Mock Data
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -166,14 +208,20 @@ export default function AnalyticsPage() {
             </p>
           </div>
           <div className="rounded-lg border bg-card p-6">
-            <PieChart
-              data={[
-                { name: 'Mobile', value: deviceData[0].visitors, color: CHART_COLORS.primary },
-                { name: 'Desktop', value: deviceData[1].visitors, color: CHART_COLORS.secondary },
-                { name: 'Tablet', value: deviceData[2].visitors, color: CHART_COLORS.tertiary },
-              ]}
-              height={350}
-            />
+            {deviceData.length >= 3 ? (
+              <PieChart
+                data={[
+                  { name: 'Mobile', value: deviceData[0].visitors, color: CHART_COLORS.primary },
+                  { name: 'Desktop', value: deviceData[1].visitors, color: CHART_COLORS.secondary },
+                  { name: 'Tablet', value: deviceData[2].visitors, color: CHART_COLORS.tertiary },
+                ]}
+                height={350}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+                Device breakdown data not available yet
+              </div>
+            )}
           </div>
         </div>
       </div>

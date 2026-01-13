@@ -1,43 +1,45 @@
-import { BetaAnalyticsDataClient, protos } from '@google-analytics/data'
-import { OAuth2Client } from 'google-auth-library'
+import { BetaAnalyticsDataClient, protos } from "@google-analytics/data";
+import { OAuth2Client } from "google-auth-library";
 
-import { decrypt } from '@/lib/oauth/encryption'
-import { createClient } from '@/lib/supabase/server'
+import { decrypt } from "@/lib/oauth/encryption";
+import { createClient } from "@/lib/supabase/server";
+import { refreshDataSourceToken } from "@/lib/oauth/refresh";
 
-type IRunReportResponse = protos.google.analytics.data.v1beta.IRunReportResponse
-type IRow = protos.google.analytics.data.v1beta.IRow
+type IRunReportResponse =
+  protos.google.analytics.data.v1beta.IRunReportResponse;
+type IRow = protos.google.analytics.data.v1beta.IRow;
 
 // ============================================================================
 // Types
 // ============================================================================
 
 export interface GACredentials {
-  access_token: string
-  refresh_token?: string | null
-  expires_at: string
-  property_id?: string
+  access_token: string;
+  refresh_token?: string | null;
+  expires_at: string;
+  property_id?: string;
 }
 
 export interface GAMetrics {
-  date: string
-  pageViews: number
-  sessions: number
-  users: number
-  bounceRate: number
-  avgSessionDuration: number
+  date: string;
+  pageViews: number;
+  sessions: number;
+  users: number;
+  bounceRate: number;
+  avgSessionDuration: number;
 }
 
 export interface GAReportRequest {
-  propertyId: string
-  startDate: string
-  endDate: string
-  dimensions?: string[]
-  metrics?: string[]
+  propertyId: string;
+  startDate: string;
+  endDate: string;
+  dimensions?: string[];
+  metrics?: string[];
 }
 
 export interface GAProperty {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 // ============================================================================
@@ -45,23 +47,23 @@ export interface GAProperty {
 // ============================================================================
 
 export class GoogleAnalyticsClient {
-  private credentials: GACredentials
+  private credentials: GACredentials;
 
   constructor(credentials: GACredentials) {
-    this.credentials = credentials
+    this.credentials = credentials;
   }
 
   /**
    * Create a GA Data client authorized with the decrypted access token.
    */
   private createAnalyticsClient(): BetaAnalyticsDataClient {
-    const accessToken = decrypt(this.credentials.access_token)
-    const oauthClient = new OAuth2Client()
-    oauthClient.setCredentials({ access_token: accessToken })
+    const accessToken = decrypt(this.credentials.access_token);
+    const oauthClient = new OAuth2Client();
+    oauthClient.setCredentials({ access_token: accessToken });
 
     return new BetaAnalyticsDataClient({
       authClient: oauthClient,
-    })
+    });
   }
 
   /**
@@ -70,37 +72,37 @@ export class GoogleAnalyticsClient {
   async getMetrics(
     propertyId: string,
     startDate: string,
-    endDate: string
+    endDate: string,
   ): Promise<GAMetrics[]> {
-    const analyticsDataClient = this.createAnalyticsClient()
+    const analyticsDataClient = this.createAnalyticsClient();
 
     try {
       // Run report
       const [response] = await analyticsDataClient.runReport({
         property: `properties/${propertyId}`,
         dateRanges: [{ startDate, endDate }],
-        dimensions: [{ name: 'date' }],
+        dimensions: [{ name: "date" }],
         metrics: [
-          { name: 'screenPageViews' },
-          { name: 'sessions' },
-          { name: 'totalUsers' },
-          { name: 'bounceRate' },
-          { name: 'averageSessionDuration' },
+          { name: "screenPageViews" },
+          { name: "sessions" },
+          { name: "totalUsers" },
+          { name: "bounceRate" },
+          { name: "averageSessionDuration" },
         ],
         orderBys: [
           {
-            dimension: { dimensionName: 'date' },
+            dimension: { dimensionName: "date" },
             desc: false,
           },
         ],
-      })
+      });
 
       // Transform response to our format
-      return this.transformResponse(response)
+      return this.transformResponse(response);
     } catch (error) {
-      console.error('GA API Error:', error)
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      throw new Error(`Failed to fetch GA data: ${message}`)
+      console.error("GA API Error:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Failed to fetch GA data: ${message}`);
     }
   }
 
@@ -108,22 +110,22 @@ export class GoogleAnalyticsClient {
    * Get real-time active users
    */
   async getRealtimeUsers(propertyId: string): Promise<number> {
-    const analyticsDataClient = this.createAnalyticsClient()
+    const analyticsDataClient = this.createAnalyticsClient();
 
     try {
       const [response] = await analyticsDataClient.runRealtimeReport({
         property: `properties/${propertyId}`,
-        metrics: [{ name: 'activeUsers' }],
-      })
+        metrics: [{ name: "activeUsers" }],
+      });
 
       if (response.rows && response.rows.length > 0) {
-        return parseInt(response.rows[0].metricValues?.[0]?.value || '0', 10)
+        return parseInt(response.rows[0].metricValues?.[0]?.value || "0", 10);
       }
 
-      return 0
+      return 0;
     } catch (error) {
-      console.error('GA Realtime API Error:', error)
-      return 0
+      console.error("GA Realtime API Error:", error);
+      return 0;
     }
   }
 
@@ -134,40 +136,40 @@ export class GoogleAnalyticsClient {
     propertyId: string,
     startDate: string,
     endDate: string,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<Array<{ page: string; views: number; avgDuration: number }>> {
-    const analyticsDataClient = this.createAnalyticsClient()
+    const analyticsDataClient = this.createAnalyticsClient();
 
     try {
       const [response] = await analyticsDataClient.runReport({
         property: `properties/${propertyId}`,
         dateRanges: [{ startDate, endDate }],
-        dimensions: [{ name: 'pagePath' }],
+        dimensions: [{ name: "pagePath" }],
         metrics: [
-          { name: 'screenPageViews' },
-          { name: 'averageSessionDuration' },
+          { name: "screenPageViews" },
+          { name: "averageSessionDuration" },
         ],
         orderBys: [
           {
-            metric: { metricName: 'screenPageViews' },
+            metric: { metricName: "screenPageViews" },
             desc: true,
           },
         ],
         limit,
-      })
+      });
 
       if (!response.rows) {
-        return []
+        return [];
       }
 
       return response.rows.map((row) => ({
-        page: row.dimensionValues?.[0]?.value || '',
-        views: parseInt(row.metricValues?.[0]?.value || '0', 10),
-        avgDuration: parseFloat(row.metricValues?.[1]?.value || '0'),
-      }))
+        page: row.dimensionValues?.[0]?.value || "",
+        views: parseInt(row.metricValues?.[0]?.value || "0", 10),
+        avgDuration: parseFloat(row.metricValues?.[1]?.value || "0"),
+      }));
     } catch (error) {
-      console.error('GA Top Pages API Error:', error)
-      throw new Error('Failed to fetch top pages')
+      console.error("GA Top Pages API Error:", error);
+      throw new Error("Failed to fetch top pages");
     }
   }
 
@@ -177,44 +179,46 @@ export class GoogleAnalyticsClient {
   async getTrafficSources(
     propertyId: string,
     startDate: string,
-    endDate: string
-  ): Promise<Array<{ source: string; medium: string; sessions: number; users: number }>> {
-    const analyticsDataClient = this.createAnalyticsClient()
+    endDate: string,
+  ): Promise<
+    Array<{ source: string; medium: string; sessions: number; users: number }>
+  > {
+    const analyticsDataClient = this.createAnalyticsClient();
 
     try {
       const [response] = await analyticsDataClient.runReport({
         property: `properties/${propertyId}`,
         dateRanges: [{ startDate, endDate }],
         dimensions: [
-          { name: 'sessionSource' },
-          { name: 'sessionMedium' },
+          { name: "sessionSource" },
+          { name: "sessionMedium" },
         ],
         metrics: [
-          { name: 'sessions' },
-          { name: 'totalUsers' },
+          { name: "sessions" },
+          { name: "totalUsers" },
         ],
         orderBys: [
           {
-            metric: { metricName: 'sessions' },
+            metric: { metricName: "sessions" },
             desc: true,
           },
         ],
         limit: 20,
-      })
+      });
 
       if (!response.rows) {
-        return []
+        return [];
       }
 
       return response.rows.map((row) => ({
-        source: row.dimensionValues?.[0]?.value || '(direct)',
-        medium: row.dimensionValues?.[1]?.value || '(none)',
-        sessions: parseInt(row.metricValues?.[0]?.value || '0', 10),
-        users: parseInt(row.metricValues?.[1]?.value || '0', 10),
-      }))
+        source: row.dimensionValues?.[0]?.value || "(direct)",
+        medium: row.dimensionValues?.[1]?.value || "(none)",
+        sessions: parseInt(row.metricValues?.[0]?.value || "0", 10),
+        users: parseInt(row.metricValues?.[1]?.value || "0", 10),
+      }));
     } catch (error) {
-      console.error('GA Traffic Sources API Error:', error)
-      throw new Error('Failed to fetch traffic sources')
+      console.error("GA Traffic Sources API Error:", error);
+      throw new Error("Failed to fetch traffic sources");
     }
   }
 
@@ -223,17 +227,17 @@ export class GoogleAnalyticsClient {
    */
   private transformResponse(response: IRunReportResponse): GAMetrics[] {
     if (!response.rows || response.rows.length === 0) {
-      return []
+      return [];
     }
 
     return response.rows.map((row: IRow) => ({
-      date: row.dimensionValues?.[0]?.value || '',
-      pageViews: parseInt(row.metricValues?.[0]?.value || '0', 10),
-      sessions: parseInt(row.metricValues?.[1]?.value || '0', 10),
-      users: parseInt(row.metricValues?.[2]?.value || '0', 10),
-      bounceRate: parseFloat(row.metricValues?.[3]?.value || '0'),
-      avgSessionDuration: parseFloat(row.metricValues?.[4]?.value || '0'),
-    }))
+      date: row.dimensionValues?.[0]?.value || "",
+      pageViews: parseInt(row.metricValues?.[0]?.value || "0", 10),
+      sessions: parseInt(row.metricValues?.[1]?.value || "0", 10),
+      users: parseInt(row.metricValues?.[2]?.value || "0", 10),
+      bounceRate: parseFloat(row.metricValues?.[3]?.value || "0"),
+      avgSessionDuration: parseFloat(row.metricValues?.[4]?.value || "0"),
+    }));
   }
 
   /**
@@ -245,9 +249,9 @@ export class GoogleAnalyticsClient {
     // This would require the Google Analytics Admin API
     // For MVP, users will provide their property ID manually
     throw new Error(
-      'Property listing not yet implemented. Please provide your GA4 property ID manually. ' +
-      'You can find it in Google Analytics: Admin > Property > Property Details.'
-    )
+      "Property listing not yet implemented. Please provide your GA4 property ID manually. " +
+        "You can find it in Google Analytics: Admin > Property > Property Details.",
+    );
   }
 }
 
@@ -258,116 +262,125 @@ export class GoogleAnalyticsClient {
 /**
  * Create GA client for a data source
  */
-export async function getGAClientForSource(sourceId: string): Promise<GoogleAnalyticsClient> {
-  const supabase = await createClient()
+export async function getGAClientForSource(
+  sourceId: string,
+): Promise<GoogleAnalyticsClient> {
+  const supabase = await createClient();
 
-  // Get data source with credentials
+  // Refresh token if expired (this will update credentials in DB if needed)
+  await refreshDataSourceToken(sourceId);
+
+  // Get data source with credentials (fetch after refresh to get updated token)
   const { data: source, error } = await supabase
-    .from('data_sources')
-    .select('*')
-    .eq('id', sourceId)
-    .eq('platform', 'google_analytics')
-    .single()
+    .from("data_sources")
+    .select("*")
+    .eq("id", sourceId)
+    .eq("platform", "google_analytics")
+    .single();
 
   if (error || !source) {
-    throw new Error('Data source not found')
+    throw new Error("Data source not found");
   }
 
-  if (source.connection_status !== 'connected') {
-    throw new Error('Data source not connected')
+  if (source.connection_status !== "connected") {
+    throw new Error("Data source not connected");
   }
 
   if (!source.credentials) {
-    throw new Error('No credentials found for data source')
+    throw new Error("No credentials found for data source");
   }
 
   // Create and return GA client
-  return new GoogleAnalyticsClient(source.credentials as GACredentials)
+  return new GoogleAnalyticsClient(source.credentials as GACredentials);
 }
 
 /**
  * Get GA client by platform (convenience function)
  */
-export async function getGAClientForUser(): Promise<{
-  client: GoogleAnalyticsClient
-  sourceId: string
-  propertyId: string | null
-} | null> {
-  const supabase = await createClient()
+export async function getGAClientForUser(): Promise<
+  {
+    client: GoogleAnalyticsClient;
+    sourceId: string;
+    propertyId: string | null;
+  } | null
+> {
+  const supabase = await createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    return null
+    return null;
   }
 
   const { data: source, error } = await supabase
-    .from('data_sources')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('platform', 'google_analytics')
-    .eq('connection_status', 'connected')
-    .single()
+    .from("data_sources")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("platform", "google_analytics")
+    .eq("connection_status", "connected")
+    .single();
 
   if (error || !source || !source.credentials) {
-    return null
+    return null;
   }
 
-  const credentials = source.credentials as GACredentials
+  const credentials = source.credentials as GACredentials;
 
   return {
     client: new GoogleAnalyticsClient(credentials),
     sourceId: source.id,
     propertyId: credentials.property_id || null,
-  }
+  };
 }
 
 /**
  * Format date for GA API (YYYY-MM-DD)
  */
 export function formatDateForGA(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split("T")[0];
 }
 
 /**
  * Get date range presets
  */
-export function getDateRange(preset: 'today' | 'yesterday' | '7days' | '30days' | '90days'): {
-  startDate: string
-  endDate: string
+export function getDateRange(
+  preset: "today" | "yesterday" | "7days" | "30days" | "90days",
+): {
+  startDate: string;
+  endDate: string;
 } {
-  const now = new Date()
-  const today = formatDateForGA(now)
+  const now = new Date();
+  const today = formatDateForGA(now);
 
   switch (preset) {
-    case 'today':
-      return { startDate: today, endDate: today }
+    case "today":
+      return { startDate: today, endDate: today };
 
-    case 'yesterday': {
-      const yesterday = new Date(now)
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = formatDateForGA(yesterday)
-      return { startDate: yesterdayStr, endDate: yesterdayStr }
+    case "yesterday": {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = formatDateForGA(yesterday);
+      return { startDate: yesterdayStr, endDate: yesterdayStr };
     }
 
-    case '7days': {
-      const weekAgo = new Date(now)
-      weekAgo.setDate(weekAgo.getDate() - 7)
-      return { startDate: formatDateForGA(weekAgo), endDate: today }
+    case "7days": {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return { startDate: formatDateForGA(weekAgo), endDate: today };
     }
 
-    case '30days': {
-      const monthAgo = new Date(now)
-      monthAgo.setDate(monthAgo.getDate() - 30)
-      return { startDate: formatDateForGA(monthAgo), endDate: today }
+    case "30days": {
+      const monthAgo = new Date(now);
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      return { startDate: formatDateForGA(monthAgo), endDate: today };
     }
 
-    case '90days': {
-      const quarterAgo = new Date(now)
-      quarterAgo.setDate(quarterAgo.getDate() - 90)
-      return { startDate: formatDateForGA(quarterAgo), endDate: today }
+    case "90days": {
+      const quarterAgo = new Date(now);
+      quarterAgo.setDate(quarterAgo.getDate() - 90);
+      return { startDate: formatDateForGA(quarterAgo), endDate: today };
     }
   }
 }

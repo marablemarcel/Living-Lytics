@@ -1,67 +1,60 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import { useEffect, useState } from "react";
+import { getUserDataSources } from "@/lib/api/connections";
 
 interface DataSource {
-  id: string
-  name: string
-  type: string
-  connected: boolean
+  id: string;
+  name: string;
+  type: string;
+  connected: boolean;
 }
 
 interface UseDataSourcesReturn {
-  hasDataSources: boolean
-  loading: boolean
-  dataSources: DataSource[]
-  toggleMockData: () => void
+  hasDataSources: boolean;
+  loading: boolean;
+  dataSources: DataSource[];
 }
-
-const STORAGE_KEY = 'dev_show_mock_data'
 
 /**
  * Hook to manage data source state
- *
- * In development mode, supports a localStorage flag to show/hide mock data
- * In production, will check for actual connected data sources
+ * Returns real connected data sources from the database
  */
 export function useDataSources(): UseDataSourcesReturn {
-  const [hasDataSources, setHasDataSources] = useState(() => {
-    const isDevelopment = process.env.NODE_ENV === 'development'
-    if (isDevelopment && typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEY) === 'true'
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkConnections() {
+      try {
+        setLoading(true);
+        const sources = await getUserDataSources();
+        const connectedSources = sources.filter((s) =>
+          s.connection_status === "connected"
+        );
+
+        setDataSources(connectedSources.map((s) => ({
+          id: s.id,
+          name: s.platform,
+          type: s.platform,
+          connected: true,
+        })));
+      } catch (error) {
+        console.error("Failed to check data sources:", error);
+        setDataSources([]);
+      } finally {
+        setLoading(false);
+      }
     }
-    return false
-  })
-  const loading = false
 
-  /**
-   * Toggle the mock data flag in development mode
-   * This allows developers to switch between empty state and data views
-   */
-  const toggleMockData = () => {
-    if (typeof window === 'undefined') return
-
-    const isDevelopment = process.env.NODE_ENV === 'development'
-
-    if (isDevelopment) {
-      const currentValue = localStorage.getItem(STORAGE_KEY) === 'true'
-      const newValue = !currentValue
-      localStorage.setItem(STORAGE_KEY, String(newValue))
-      setHasDataSources(newValue)
-
-      // Log for developer awareness
-      console.log(`[Dev Mode] Mock data ${newValue ? 'enabled' : 'disabled'}`)
-    } else {
-      console.warn('toggleMockData() is only available in development mode')
-    }
-  }
+    checkConnections();
+  }, []);
 
   return {
-    hasDataSources,
+    hasDataSources: dataSources.length > 0,
     loading,
-    dataSources: [], // Empty for now, will be populated with real sources in Week 5
-    toggleMockData,
-  }
+    dataSources,
+  };
 }
 
-export default useDataSources
+export default useDataSources;
